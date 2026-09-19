@@ -1455,21 +1455,6 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ db, currentUser, initi
                           />
                         </div>
                       )}
-
-                      {/* Pembahasan & Analisis Gerak */}
-                      <div>
-                        <label className="block text-[10px] font-bold text-purple-900 mb-0.5 flex items-center gap-1">
-                          <Activity className="w-3.5 h-3.5 text-purple-600" />
-                          <span>Analisis Evaluasi Gerakan Motorik & Pembahasan Jawaban:</span>
-                        </label>
-                        <textarea
-                          rows={2}
-                          placeholder="Jelaskan analisis biomekanika, koordinasi kinetik, posisi sendi/tungkai, atau alasan ilmiah dari kunci jawaban..."
-                          value={s.pembahasan || ''}
-                          onChange={(e) => handleQuestionChange(qIdx, 'pembahasan', e.target.value)}
-                          className="w-full px-3 py-1.5 bg-purple-50/40 border border-purple-200 rounded-xl text-xs text-slate-800 focus:outline-hidden"
-                        />
-                      </div>
                     </div>
                   ))}
                 </div>

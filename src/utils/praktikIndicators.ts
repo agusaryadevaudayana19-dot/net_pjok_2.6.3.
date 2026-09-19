@@ -301,47 +301,176 @@ export function createDefaultIndikatorPraktikList(
 }
 
 /**
- * Menghitung nilai akhir 0-100 dan predikat dari kumpulan indikator
+ * Kriteria Penilaian Praktik PJOK Sesuai Rentang Skor:
+ * - Skor 1: Nilai 60 - 70
+ * - Skor 2: Nilai 71 - 80
+ * - Skor 3: Nilai 80 - 85
+ * - Skor 4: Nilai 86 - 90
  */
-export function calculateIndikatorScore(indikatorList: IndikatorPraktik[]): {
+export interface KriteriaSkorPraktik {
+  skor: number;
+  label: string;
+  min: number;
+  max: number;
+  rentangText: string;
+  deskripsi: string;
+}
+
+export const KRITERIA_SKOR_PRAKTIK: Record<number, KriteriaSkorPraktik> = {
+  1: {
+    skor: 1,
+    label: 'Kurang',
+    min: 60,
+    max: 70,
+    rentangText: '60 - 70',
+    deskripsi: 'Penguasaan teknik dasar masih kurang dan butuh bimbingan intensif',
+  },
+  2: {
+    skor: 2,
+    label: 'Cukup',
+    min: 71,
+    max: 80,
+    rentangText: '71 - 80',
+    deskripsi: 'Mampu melakukan teknik gerakan meski belum konsisten',
+  },
+  3: {
+    skor: 3,
+    label: 'Baik',
+    min: 80,
+    max: 85,
+    rentangText: '80 - 85',
+    deskripsi: 'Pola gerak dan koordinasi baik, teknik terarah dan lancar',
+  },
+  4: {
+    skor: 4,
+    label: 'Sangat Baik',
+    min: 86,
+    max: 90,
+    rentangText: '86 - 90',
+    deskripsi: 'Gerakan presisi, otomatis, kontrol tinggi dan sportivitas prima',
+  },
+};
+
+/**
+ * Menghitung nilai skala 100 sesuai kriteria rentang:
+ * - Skor 1: 60-70
+ * - Skor 2: 71-80
+ * - Skor 3: 80-85
+ * - Skor 4: 86-90
+ * Disesuaikan dengan persentase kehadiran murid dan variasi acak (random).
+ */
+export function calculatePraktikNilaiFromCriteria(
+  skorSkala4: number,
+  attendanceRate: number = 1.0,
+  seedOrRandom?: number | string
+): number {
+  let min = 80;
+  let max = 85;
+
+  if (skorSkala4 < 1.75) {
+    min = 60;
+    max = 70;
+  } else if (skorSkala4 < 2.75) {
+    min = 71;
+    max = 80;
+  } else if (skorSkala4 < 3.75) {
+    min = 80;
+    max = 85;
+  } else {
+    min = 86;
+    max = 90;
+  }
+
+  const range = max - min;
+
+  // Pseudo-random factor between 0 and 1
+  let randomFactor = 0.5;
+  if (typeof seedOrRandom === 'number') {
+    randomFactor = Math.abs(Math.sin(seedOrRandom * 123.45)) % 1;
+  } else if (typeof seedOrRandom === 'string') {
+    let hash = 0;
+    for (let i = 0; i < seedOrRandom.length; i++) {
+      hash = (hash << 5) - hash + seedOrRandom.charCodeAt(i);
+      hash |= 0;
+    }
+    randomFactor = Math.abs(Math.sin(hash)) % 1;
+  } else {
+    randomFactor = Math.random();
+  }
+
+  // Attendance rate (clamped between 0.5 and 1.0)
+  const clampedAttendance = Math.min(1.0, Math.max(0.5, attendanceRate));
+
+  // Bobot: 60% kehadiran, 40% variasi acak dalam interval kriteria
+  const combinedFactor = clampedAttendance * 0.6 + randomFactor * 0.4;
+  const result = Math.round(min + combinedFactor * range);
+
+  // Pastikan SELALU strictly berada di dalam interval min - max yang diminta
+  return Math.min(max, Math.max(min, result));
+}
+
+/**
+ * Menghitung nilai akhir 0-100 dan predikat dari kumpulan indikator
+ * Menggunakan kriteria rentang skor (1: 60-70, 2: 71-80, 3: 80-85, 4: 86-90)
+ * yang disesuaikan dengan kehadiran dan variasi acak.
+ */
+export function calculateIndikatorScore(
+  indikatorList: IndikatorPraktik[],
+  options?: {
+    attendanceRate?: number;
+    seed?: number | string;
+  }
+): {
   totalSkor: number;
   maxSkor: number;
   nilai100: number;
   rataRataSkala4: number;
   predikat: 'A' | 'B' | 'C' | 'D';
   predikatLabel: string;
+  rentangKriteria: string;
 } {
   if (!indikatorList || indikatorList.length === 0) {
     return {
       totalSkor: 0,
       maxSkor: 4,
-      nilai100: 75,
+      nilai100: 82,
       rataRataSkala4: 3.0,
       predikat: 'B',
       predikatLabel: 'B (Baik)',
+      rentangKriteria: '80 - 85',
     };
   }
 
   const totalSkor = indikatorList.reduce((sum, ind) => sum + (Number(ind.skor) || 1), 0);
   const maxSkor = indikatorList.length * 4;
-  const nilai100 = Math.min(100, Math.max(0, Math.round((totalSkor / maxSkor) * 100)));
   const rataRataSkala4 = Number((totalSkor / indikatorList.length).toFixed(2));
+
+  const attendanceRate = options?.attendanceRate ?? 1.0;
+  const seed = options?.seed;
+
+  // Hitung nilai berdasarkan kriteria skor
+  const nilai100 = calculatePraktikNilaiFromCriteria(rataRataSkala4, attendanceRate, seed);
 
   let predikat: 'A' | 'B' | 'C' | 'D' = 'C';
   let predikatLabel = 'C (Cukup)';
+  let rentangKriteria = '80 - 85';
 
-  if (nilai100 >= 88) {
+  if (rataRataSkala4 >= 3.75) {
     predikat = 'A';
     predikatLabel = 'A (Sangat Baik)';
-  } else if (nilai100 >= 78) {
+    rentangKriteria = '86 - 90';
+  } else if (rataRataSkala4 >= 2.75) {
     predikat = 'B';
     predikatLabel = 'B (Baik)';
-  } else if (nilai100 >= 65) {
+    rentangKriteria = '80 - 85';
+  } else if (rataRataSkala4 >= 1.75) {
     predikat = 'C';
     predikatLabel = 'C (Cukup)';
+    rentangKriteria = '71 - 80';
   } else {
     predikat = 'D';
     predikatLabel = 'D (Kurang)';
+    rentangKriteria = '60 - 70';
   }
 
   return {
@@ -351,41 +480,46 @@ export function calculateIndikatorScore(indikatorList: IndikatorPraktik[]): {
     rataRataSkala4,
     predikat,
     predikatLabel,
+    rentangKriteria,
   };
 }
 
 export const SKALA_INDIKATOR_INFO: Record<
   number,
-  { label: string; badge: string; short: string; bg: string; text: string; activeBg: string }
+  { label: string; badge: string; short: string; bg: string; text: string; activeBg: string; rentang: string }
 > = {
   1: {
-    label: 'Kurang (1)',
+    label: 'Kurang (Skor 1)',
     short: 'Kurang',
     badge: 'K',
+    rentang: 'Nilai 60 - 70',
     bg: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100',
     text: 'text-rose-700',
     activeBg: 'bg-rose-600 text-white border-rose-600 shadow-xs font-bold ring-2 ring-rose-400',
   },
   2: {
-    label: 'Cukup (2)',
+    label: 'Cukup (Skor 2)',
     short: 'Cukup',
     badge: 'C',
+    rentang: 'Nilai 71 - 80',
     bg: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
     text: 'text-amber-700',
     activeBg: 'bg-amber-500 text-white border-amber-500 shadow-xs font-bold ring-2 ring-amber-400',
   },
   3: {
-    label: 'Baik (3)',
+    label: 'Baik (Skor 3)',
     short: 'Baik',
     badge: 'B',
+    rentang: 'Nilai 80 - 85',
     bg: 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100',
     text: 'text-sky-700',
     activeBg: 'bg-sky-600 text-white border-sky-600 shadow-xs font-bold ring-2 ring-sky-400',
   },
   4: {
-    label: 'Sangat Baik (4)',
+    label: 'Sangat Baik (Skor 4)',
     short: 'Sangat Baik',
     badge: 'SB',
+    rentang: 'Nilai 86 - 90',
     bg: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
     text: 'text-emerald-700',
     activeBg: 'bg-emerald-600 text-white border-emerald-600 shadow-xs font-bold ring-2 ring-emerald-400',

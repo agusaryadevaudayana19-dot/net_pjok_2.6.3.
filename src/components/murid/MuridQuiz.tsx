@@ -101,15 +101,18 @@ export function MuridQuiz({ currentUser, db, initialQuizId, onClearParam }: Muri
 
     let totalScore = 0;
     let maxScore = 0;
+    let correctCount = 0;
 
     currQuestions.forEach((s) => {
       maxScore += s.bobot || 20;
       if (isQuestionAnswerCorrect(s, currentAnswers[s.id])) {
         totalScore += s.bobot || 20;
+        correctCount++;
       }
     });
 
     const calculated100 = Math.round((totalScore / (maxScore || 100)) * 100);
+    const wrongCount = Math.max(0, currQuestions.length - correctCount);
     setFinalScore(calculated100);
     setIsFinished(true);
     setShowExitConfirmModal(false);
@@ -169,8 +172,19 @@ export function MuridQuiz({ currentUser, db, initialQuizId, onClearParam }: Muri
         muridNama: currentUser.name,
         kelasId: currentUser.kelasId || (db.kelas && db.kelas[0]?.id) || '',
         nilai: calculated100,
+        jumlahBenar: correctCount,
+        jumlahSalah: wrongCount,
+        tanggalMengerjakan: new Date().toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
         tanggalSelesai: new Date().toISOString().slice(0, 10),
+        jawaban: currentAnswers,
         jawabanMurid: currentAnswers,
+        status: 'Selesai',
       };
 
       return {
@@ -237,6 +251,16 @@ export function MuridQuiz({ currentUser, db, initialQuizId, onClearParam }: Muri
   }, [activeQuiz, isFinished]);
 
   const handleStartQuiz = (quiz: Quiz) => {
+    const hasTaken = (db.jawabanQuiz || []).find(
+      (j) => j.quizId === quiz.id && j.muridId === currentUser.id
+    );
+    if (hasTaken) {
+      alert(
+        `Kuis "${quiz.judul}" sudah Anda kerjakan (Nilai: ${hasTaken.nilai}) dan telah dikunci otomatis oleh sistem.\n\nPengerjaan kuis hanya diizinkan 1 kali tanpa pengulangan. Jika Anda memerlukan remedial atau izin mengulang, silakan hubungi Guru PJOK atau Admin untuk membuka kunci pengerjaan.`
+      );
+      return;
+    }
+
     setActiveQuiz(quiz);
     setCurrentSoalIndex(0);
     setAnswers({});
@@ -385,6 +409,18 @@ export function MuridQuiz({ currentUser, db, initialQuizId, onClearParam }: Muri
                           <p className="text-xs text-purple-700 font-bold mt-0.5">{q.subJudul}</p>
                         )}
                       </div>
+
+                      {hasTaken && (
+                        <div className="p-2.5 rounded-xl bg-amber-50/90 border border-amber-200 text-amber-950 text-[11px] flex items-start gap-2">
+                          <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="space-y-0.5">
+                            <p className="font-bold text-slate-800">Kuis Terkunci (Aturan 1x Pengerjaan)</p>
+                            <p className="text-slate-600 text-[10.5px] leading-snug">
+                              Anda sudah mengerjakan kuis ini (Nilai: <span className="font-bold text-emerald-700">{hasTaken.nilai}</span>). Pengulangan dikunci. Untuk mengulang, silakan hubungi Guru PJOK atau Admin untuk membuka kunci.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
@@ -397,14 +433,30 @@ export function MuridQuiz({ currentUser, db, initialQuizId, onClearParam }: Muri
                         </span>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleStartQuiz(q)}
-                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                      >
-                        {hasTaken ? 'Kerjakan Ulang' : 'Mulai Quiz'}
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
+                      {hasTaken ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            alert(
+                              `Kuis "${q.judul}" telah Anda selesaikan dengan nilai ${hasTaken.nilai} dan sistem menguncinya.\n\nAturan kuis hanya mengizinkan 1 kali pengerjaan tanpa pengulangan langsung. Jika memerlukan izin mengulang atau remedial, silakan hubungi Guru PJOK atau Admin untuk membuka kunci kuis.`
+                            );
+                          }}
+                          className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all border border-slate-300 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          title="Kuis terkunci. Hubungi Guru atau Admin untuk membuka kunci."
+                        >
+                          <Lock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Terkunci</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleStartQuiz(q)}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <span>Mulai Quiz</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1037,19 +1089,6 @@ export function MuridQuiz({ currentUser, db, initialQuizId, onClearParam }: Muri
                             </span>
                           </div>
                         </div>
-
-                        {/* Analisis Evaluasi Gerakan Motorik */}
-                        {s.pembahasan && (
-                          <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-200 text-[11px] space-y-1">
-                            <div className="flex items-center gap-1.5 font-bold text-purple-900">
-                              <Activity className="w-3.5 h-3.5 text-purple-700" />
-                              <span>Analisis Evaluasi Gerakan Motorik & Pembahasan:</span>
-                            </div>
-                            <p className="text-slate-700 leading-relaxed pl-5 font-medium">
-                              {s.pembahasan}
-                            </p>
-                          </div>
-                        )}
                       </div>
                     );
                   })}

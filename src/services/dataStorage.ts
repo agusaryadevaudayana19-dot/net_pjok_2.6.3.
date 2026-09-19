@@ -214,7 +214,7 @@ const DEFAULT_QUIZ_SOAL: Soal[] = [
     pilihan: [],
     kunciJawaban: 'Lutut dan pergelangan kaki',
     pembahasan:
-      'Analisis Evaluasi Gerakan Motorik: Fleksi sendi lutut (knee flexion) bersama sendi pergelangan kaki (ankle) dan panggul bertindak sebagai peredam kejut mekanis tubuh (deceleration phase). Mendarat dengan tungkai kaku atau lurus meningkatkan risiko cedera robekan ligamen ACL secara drastis.',
+      'Fleksi sendi lutut (knee flexion) bersama sendi pergelangan kaki (ankle) dan panggul bertindak sebagai peredam kejut mekanis tubuh (deceleration phase). Mendarat dengan tungkai kaku atau lurus meningkatkan risiko cedera robekan ligamen ACL secara drastis.',
     bobot: 20,
   },
 ];

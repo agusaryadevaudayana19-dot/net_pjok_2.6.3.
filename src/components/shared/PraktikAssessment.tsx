@@ -25,6 +25,7 @@ import {
   Trash2,
   SlidersHorizontal,
   Edit3,
+  RefreshCw,
 } from 'lucide-react';
 import { PenilaianPraktik, RubrikPraktik, User, IndikatorPraktik, getTeacherAssignedClasses } from '../../types';
 import { dataStorage, LMSDatabase } from '../../services/dataStorage';
@@ -99,6 +100,31 @@ export const PraktikAssessment: React.FC<PraktikAssessmentProps> = ({ db, curren
   const [customIndikatorNama, setCustomIndikatorNama] = useState<string>('');
   const [customIndikatorDesc, setCustomIndikatorDesc] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [randomSeed, setRandomSeed] = useState<number>(1);
+
+  // Helper untuk menghitung tingkat kehadiran murid (attendance rate)
+  const getMuridAttendance = (muridId: string) => {
+    const muridObj = (db.users || []).find((u) => u.id === muridId);
+    const records = (db.presensi || []).filter(
+      (p) =>
+        p.muridId === muridId ||
+        (muridObj?.nis && p.nis === muridObj.nis) ||
+        (muridObj?.name && p.muridNama?.toLowerCase() === muridObj.name.toLowerCase())
+    );
+    if (records.length === 0) {
+      return { rate: 1.0, hadir: 1, total: 1, text: '100% (Default)' };
+    }
+    const hadir = records.filter(
+      (p) => p.status === 'Hadir' || (p.status as string) === 'hadir'
+    ).length;
+    const rate = hadir / records.length;
+    return {
+      rate,
+      hadir,
+      total: records.length,
+      text: `${Math.round(rate * 100)}% (${hadir}/${records.length} Pertemuan)`,
+    };
+  };
 
   // Local state for scores keyed by `${materiJudul}_${muridId}`
   // Contains score per indicatorId and notes
@@ -438,7 +464,11 @@ export const PraktikAssessment: React.FC<PraktikAssessmentProps> = ({ db, curren
 
       const assessmentData = getMuridAssessment(muridId);
       const indikatorList = getStudentIndikatorList(muridId);
-      const scoreCalc = calculateIndikatorScore(indikatorList);
+      const att = getMuridAttendance(muridId);
+      const scoreCalc = calculateIndikatorScore(indikatorList, {
+        attendanceRate: att.rate,
+        seed: `${muridId}-${randomSeed}`,
+      });
 
       // Map back to rubrik for legacy backward compatibility
       const rubrikBackward: RubrikPraktik = {
@@ -793,6 +823,85 @@ export const PraktikAssessment: React.FC<PraktikAssessmentProps> = ({ db, curren
 
       {mainViewMode === 'rubrik' ? (
         <div className="space-y-6">
+          {/* Banner Kriteria Penilaian Praktik PJOK */}
+          <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border border-teal-200/90 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                  ★
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 tracking-wide uppercase">
+                    Kriteria Penilaian Praktik PJOK (Konversi Skor Rubrik & Kehadiran)
+                  </h4>
+                  <p className="text-[11px] text-slate-600">
+                    Nilai akhir (0-100) dihitung otomatis dalam rentang kriteria berikut, disesuaikan dengan kehadiran murid & variasi acak.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setRandomSeed((prev) => prev + 1);
+                  setToastMessage('Variasi nilai acak dalam rentang kriteria diperbarui.');
+                  setTimeout(() => setToastMessage(null), 3000);
+                }}
+                className="px-3 py-1.5 bg-white hover:bg-teal-50 border border-teal-300 text-teal-800 font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer self-start sm:self-auto"
+                title="Acak kembali variasi nilai dalam batas kriteria"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-teal-600" />
+                <span>Acak / Perbarui Variasi Nilai</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+              <div className="p-3 bg-white/90 rounded-2xl border border-rose-200 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="px-2 py-0.5 bg-rose-100 text-rose-800 font-black text-[10px] rounded-md">
+                    Skor 1
+                  </span>
+                  <span className="text-xs font-extrabold text-rose-700">60 – 70</span>
+                </div>
+                <p className="text-[11px] font-bold text-slate-800 mt-1">Kurang</p>
+                <p className="text-[10px] text-slate-500">Teknik dasar butuh bimbingan intensif</p>
+              </div>
+
+              <div className="p-3 bg-white/90 rounded-2xl border border-amber-200 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-black text-[10px] rounded-md">
+                    Skor 2
+                  </span>
+                  <span className="text-xs font-extrabold text-amber-700">71 – 80</span>
+                </div>
+                <p className="text-[11px] font-bold text-slate-800 mt-1">Cukup</p>
+                <p className="text-[10px] text-slate-500">Mampu melakukan dengan bantuan minimal</p>
+              </div>
+
+              <div className="p-3 bg-white/90 rounded-2xl border border-sky-200 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="px-2 py-0.5 bg-sky-100 text-sky-800 font-black text-[10px] rounded-md">
+                    Skor 3
+                  </span>
+                  <span className="text-xs font-extrabold text-sky-700">80 – 85</span>
+                </div>
+                <p className="text-[11px] font-bold text-slate-800 mt-1">Baik</p>
+                <p className="text-[10px] text-slate-500">Teknik & koordinasi gerakan lancar</p>
+              </div>
+
+              <div className="p-3 bg-white/90 rounded-2xl border border-emerald-200 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-black text-[10px] rounded-md">
+                    Skor 4
+                  </span>
+                  <span className="text-xs font-extrabold text-emerald-700">86 – 90</span>
+                </div>
+                <p className="text-[11px] font-bold text-slate-800 mt-1">Sangat Baik</p>
+                <p className="text-[10px] text-slate-500">Presisi tinggi, konsisten & prima</p>
+              </div>
+            </div>
+          </div>
+
           {/* Student Selector Card with Multi-Select Checkboxes */}
           <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -1228,7 +1337,11 @@ export const PraktikAssessment: React.FC<PraktikAssessmentProps> = ({ db, curren
                       {selectedStudents.map((murid, sIdx) => {
                         const assessmentData = getMuridAssessment(murid.id);
                         const indikatorList = getStudentIndikatorList(murid.id);
-                        const scoreCalc = calculateIndikatorScore(indikatorList);
+                        const att = getMuridAttendance(murid.id);
+                        const scoreCalc = calculateIndikatorScore(indikatorList, {
+                          attendanceRate: att.rate,
+                          seed: `${murid.id}-${randomSeed}`,
+                        });
 
                         return (
                           <div
@@ -1251,9 +1364,11 @@ export const PraktikAssessment: React.FC<PraktikAssessmentProps> = ({ db, curren
                                 <span className="text-xs font-extrabold text-slate-900 truncate block">
                                   {murid.name}
                                 </span>
-                                <span className="text-[10px] text-slate-400">
-                                  NIS: {murid.nis || '-'}
-                                </span>
+                                <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-slate-400">
+                                  <span>NIS: {murid.nis || '-'}</span>
+                                  <span>•</span>
+                                  <span className="text-teal-700 font-semibold">Kehadiran: {att.text}</span>
+                                </div>
                               </div>
                             </div>
 
@@ -1292,7 +1407,11 @@ export const PraktikAssessment: React.FC<PraktikAssessmentProps> = ({ db, curren
                 {selectedStudents.map((murid, studentIdx) => {
                   const assessmentData = getMuridAssessment(murid.id);
                   const indikatorList = getStudentIndikatorList(murid.id);
-                  const scoreCalc = calculateIndikatorScore(indikatorList);
+                  const att = getMuridAttendance(murid.id);
+                  const scoreCalc = calculateIndikatorScore(indikatorList, {
+                    attendanceRate: att.rate,
+                    seed: `${murid.id}-${randomSeed}`,
+                  });
 
                   return (
                     <div
@@ -1325,6 +1444,8 @@ export const PraktikAssessment: React.FC<PraktikAssessmentProps> = ({ db, curren
                                   selectedKelasId}
                               </strong>{' '}
                               • Materi: <span className="font-bold text-teal-700">{selectedMateriJudul}</span>
+                              • <span className="text-teal-700 font-bold">Kehadiran: {att.text}</span>
+                              • <span className="text-slate-500 font-semibold">{scoreCalc.rentangKriteria}</span>
                             </p>
                           </div>
                         </div>

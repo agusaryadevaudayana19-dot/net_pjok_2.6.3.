@@ -25,7 +25,7 @@ import {
   ListOrdered,
   HelpCircle,
 } from 'lucide-react';
-import { Tugas, PengumpulanTugas, User, SoalTugas, getTeacherAssignedClasses } from '../../types';
+import { Tugas, PengumpulanTugas, User, SoalTugas, NotifikasiItem, getTeacherAssignedClasses } from '../../types';
 import { dataStorage, LMSDatabase } from '../../services/dataStorage';
 import { InAppMediaModal } from './InAppMediaModal';
 import { UploadDataModal } from './UploadDataModal';
@@ -145,6 +145,21 @@ export const TugasManager: React.FC<TugasManagerProps> = ({ db, currentUser }) =
           : item
       ),
     }));
+
+    if (newStatus === 'Publish') {
+      const notif: NotifikasiItem = {
+        id: `notif-tug-${Date.now()}`,
+        judul: `Tugas Baru: ${t.judul}`,
+        pesan: `${currentUser.name} mempublikasikan tugas "${t.judul}". Silakan cek lembar penugasan dan kumpulkan tepat waktu.`,
+        waktu: 'Baru saja',
+        tipe: 'tugas',
+        dibaca: false,
+        targetRole: 'MURID',
+        targetId: t.id,
+        targetKelasId: t.kelasIds && t.kelasIds.length === 1 ? t.kelasIds[0] : (t.kelasId || 'ALL'),
+      };
+      dataStorage.pushNotifikasi(notif);
+    }
   };
 
   // Submissions calculation
@@ -308,6 +323,21 @@ export const TugasManager: React.FC<TugasManagerProps> = ({ db, currentUser }) =
             : item
         ),
       }));
+
+      if (finalStatus === 'Publish') {
+        const notif: NotifikasiItem = {
+          id: `notif-tug-${Date.now()}`,
+          judul: `Tugas PJOK: ${form.judul || editingTugas.judul}`,
+          pesan: `${currentUser.name} memperbarui tugas "${form.judul || editingTugas.judul}". Cek instruksi dan batas waktu pengerjaan.`,
+          waktu: 'Baru saja',
+          tipe: 'tugas',
+          dibaca: false,
+          targetRole: 'MURID',
+          targetId: editingTugas.id,
+          targetKelasId: form.kelasIds && form.kelasIds.length === 1 ? form.kelasIds[0] : 'ALL',
+        };
+        dataStorage.pushNotifikasi(notif);
+      }
     } else {
       const newT: Tugas = {
         id: `tug-${Date.now()}`,
@@ -329,6 +359,21 @@ export const TugasManager: React.FC<TugasManagerProps> = ({ db, currentUser }) =
         ...prev,
         tugas: [newT, ...prev.tugas],
       }));
+
+      if (finalStatus === 'Publish') {
+        const notif: NotifikasiItem = {
+          id: `notif-tug-${Date.now()}`,
+          judul: `Tugas Baru: ${newT.judul}`,
+          pesan: `${currentUser.name} memberikan tugas baru: "${newT.judul}". Segera periksa lembar instruksi tugas.`,
+          waktu: 'Baru saja',
+          tipe: 'tugas',
+          dibaca: false,
+          targetRole: 'MURID',
+          targetId: newT.id,
+          targetKelasId: newT.kelasIds && newT.kelasIds.length === 1 ? newT.kelasIds[0] : 'ALL',
+        };
+        dataStorage.pushNotifikasi(notif);
+      }
     }
     setIsModalOpen(false);
   };

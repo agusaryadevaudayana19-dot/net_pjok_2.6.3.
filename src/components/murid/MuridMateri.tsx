@@ -28,14 +28,56 @@ interface MuridMateriProps {
   db: LMSDatabase;
   currentUser?: User;
   initialMateriId?: string;
+  onClearParam?: () => void;
 }
 
-export const MuridMateri: React.FC<MuridMateriProps> = ({ db, currentUser, initialMateriId }) => {
+export const MuridMateri: React.FC<MuridMateriProps> = ({ db, currentUser, initialMateriId, onClearParam }) => {
   const [selectedKategori, setSelectedKategori] = useState<string>('Semua');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeMateri, setActiveMateri] = useState<Materi | null>(
     initialMateriId ? (db.materi || []).find((m) => m.id === initialMateriId) || null : null
   );
+
+  const openedInitialIdRef = React.useRef<string | null>(null);
+  const dismissedInitialIdRef = React.useRef<string | null>(null);
+
+  const handleCloseModal = () => {
+    if (initialMateriId) {
+      dismissedInitialIdRef.current = initialMateriId;
+    }
+    setActiveMateri(null);
+    if (onClearParam) {
+      onClearParam();
+    }
+  };
+
+  // Keyboard Escape listener to close materi modal
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && activeMateri) {
+        handleCloseModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeMateri, initialMateriId]);
+
+  // Respond to initialMateriId prop dynamically
+  React.useEffect(() => {
+    if (initialMateriId && (db.materi || []).length > 0) {
+      if (
+        dismissedInitialIdRef.current === initialMateriId ||
+        openedInitialIdRef.current === initialMateriId
+      ) {
+        return;
+      }
+      const found = (db.materi || []).find((m) => m.id === initialMateriId);
+      if (found) {
+        openedInitialIdRef.current = initialMateriId;
+        setActiveMateri(found);
+      }
+    }
+  }, [initialMateriId, db.materi]);
 
   // In-app media viewer modal state
   const [inAppMedia, setInAppMedia] = useState<{
@@ -313,6 +355,11 @@ export const MuridMateri: React.FC<MuridMateriProps> = ({ db, currentUser, initi
         <div
           id="materi-reader-backdrop"
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-2xs p-3 sm:p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleCloseModal();
+            }
+          }}
         >
           <div
             id="materi-reader-modal"
@@ -359,8 +406,8 @@ export const MuridMateri: React.FC<MuridMateriProps> = ({ db, currentUser, initi
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveMateri(null)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                  onClick={handleCloseModal}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
                   title="Tutup"
                 >
                   <X className="w-5 h-5" />
@@ -590,8 +637,8 @@ export const MuridMateri: React.FC<MuridMateriProps> = ({ db, currentUser, initi
               </button>
               <button
                 type="button"
-                onClick={() => setActiveMateri(null)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-colors shadow-2xs"
+                onClick={handleCloseModal}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-colors shadow-2xs cursor-pointer"
               >
                 Selesai Membaca
               </button>

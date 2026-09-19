@@ -22,7 +22,7 @@ import {
   Upload,
   Activity,
 } from 'lucide-react';
-import { Quiz, Soal, JawabanQuiz, User, getTeacherAssignedClasses } from '../../types';
+import { Quiz, Soal, JawabanQuiz, User, NotifikasiItem, getTeacherAssignedClasses } from '../../types';
 import { dataStorage, LMSDatabase } from '../../services/dataStorage';
 import { UploadDataModal } from './UploadDataModal';
 
@@ -181,6 +181,21 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ db, currentUser }) => 
           : item
       ),
     }));
+
+    if (newStatus === 'Publish') {
+      const notif: NotifikasiItem = {
+        id: `notif-qz-${Date.now()}`,
+        judul: `Ujian/Quiz Baru: ${q.judul}`,
+        pesan: `${currentUser.name} mempublikasikan ${q.judul} (${q.durasiMenit || 20} menit). Silakan kerjakan dengan teliti.`,
+        waktu: 'Baru saja',
+        tipe: 'quiz',
+        dibaca: false,
+        targetRole: 'MURID',
+        targetId: q.id,
+        targetKelasId: q.kelasIds && q.kelasIds.length === 1 ? q.kelasIds[0] : (q.kelasId || 'ALL'),
+      };
+      dataStorage.pushNotifikasi(notif);
+    }
   };
 
   // Filter student quiz attempts
@@ -275,6 +290,21 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ db, currentUser }) => 
             : item
         ),
       }));
+
+      if (finalStatus === 'Publish') {
+        const notif: NotifikasiItem = {
+          id: `notif-qz-${Date.now()}`,
+          judul: `Ujian/Quiz PJOK: ${form.judul || editingQuiz.judul}`,
+          pesan: `${currentUser.name} memperbarui ${form.judul || editingQuiz.judul}. Silakan persiapkan diri dan kerjakan soal.`,
+          waktu: 'Baru saja',
+          tipe: 'quiz',
+          dibaca: false,
+          targetRole: 'MURID',
+          targetId: editingQuiz.id,
+          targetKelasId: form.kelasIds && form.kelasIds.length === 1 ? form.kelasIds[0] : 'ALL',
+        };
+        dataStorage.pushNotifikasi(notif);
+      }
     } else {
       const newQ: Quiz = {
         id: `qz-${Date.now()}`,
@@ -297,6 +327,21 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ db, currentUser }) => 
         ...prev,
         quiz: [newQ, ...prev.quiz],
       }));
+
+      if (finalStatus === 'Publish') {
+        const notif: NotifikasiItem = {
+          id: `notif-qz-${Date.now()}`,
+          judul: `Ujian/Quiz Baru: ${newQ.judul}`,
+          pesan: `${currentUser.name} mempublikasikan ${newQ.judul} (${newQ.durasiMenit} menit). Silakan mulai mengerjakan.`,
+          waktu: 'Baru saja',
+          tipe: 'quiz',
+          dibaca: false,
+          targetRole: 'MURID',
+          targetId: newQ.id,
+          targetKelasId: newQ.kelasIds && newQ.kelasIds.length === 1 ? newQ.kelasIds[0] : 'ALL',
+        };
+        dataStorage.pushNotifikasi(notif);
+      }
     }
     setIsModalOpen(false);
   };

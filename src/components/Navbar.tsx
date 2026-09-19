@@ -88,11 +88,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   const userNotifikasi = useMemo(() => {
     const list = db.notifikasi || [];
     if (currentUser.role === 'MURID') {
-      return list.filter(
-        (n) =>
-          (!n.targetRole || n.targetRole === 'MURID') &&
-          (!n.targetMuridId || n.targetMuridId === currentUser.id)
-      );
+      const myKelasId = currentUser.kelasId || '';
+      return list.filter((n) => {
+        if (n.targetRole && n.targetRole !== 'MURID' && n.targetRole !== 'ALL') return false;
+        if (n.targetMuridId && n.targetMuridId !== currentUser.id) return false;
+        if (n.targetKelasId && n.targetKelasId !== 'ALL' && myKelasId && n.targetKelasId !== myKelasId) {
+          return false;
+        }
+        return true;
+      });
     }
     return list;
   }, [db.notifikasi, currentUser]);

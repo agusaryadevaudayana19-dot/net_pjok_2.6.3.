@@ -146,7 +146,26 @@ export default function App() {
   };
 
   const handleNavigate = (menuId: string, param?: string) => {
-    setActiveMenu(menuId);
+    let targetMenu = menuId;
+    if (currentUser?.role === 'MURID') {
+      if (targetMenu === 'tugas') targetMenu = 'tugas-saya';
+      else if (targetMenu === 'materi') targetMenu = 'materi-saya';
+      else if (targetMenu === 'quiz' || targetMenu === 'kuis') targetMenu = 'quiz-saya';
+      else if (targetMenu === 'presensi') targetMenu = 'presensi-saya';
+      else if (targetMenu === 'nilai') targetMenu = 'nilai-saya';
+      else if (targetMenu === 'sikap') targetMenu = 'sikap-saya';
+      else if (targetMenu === 'refleksi') targetMenu = 'refleksi-saya';
+      else if (targetMenu === 'penilaian-teman') targetMenu = 'penilaian-teman-saya';
+      else if (targetMenu === 'profil') targetMenu = 'profil-saya';
+    } else if (currentUser?.role === 'GURU') {
+      if (targetMenu === 'tugas-saya') targetMenu = 'tugas';
+      else if (targetMenu === 'materi-saya') targetMenu = 'materi';
+      else if (targetMenu === 'quiz-saya') targetMenu = 'quiz';
+      else if (targetMenu === 'presensi-saya') targetMenu = 'presensi';
+      else if (targetMenu === 'nilai-saya') targetMenu = 'nilai';
+      else if (targetMenu === 'profil-saya') targetMenu = 'profil';
+    }
+    setActiveMenu(targetMenu);
     setActiveSubParam(param);
     setIsSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -348,28 +367,59 @@ export default function App() {
               currentUser={currentUser}
               onNavigate={handleNavigate}
               initialPengumumanId={activeSubParam}
+              onClearParam={() => setActiveSubParam(undefined)}
             />
           );
         case 'materi-saya':
-          return <MuridMateri db={db} currentUser={currentUser} initialMateriId={activeSubParam} />;
+        case 'materi':
+          return (
+            <MuridMateri
+              db={db}
+              currentUser={currentUser}
+              initialMateriId={activeSubParam}
+              onClearParam={() => setActiveSubParam(undefined)}
+            />
+          );
         case 'tugas-saya':
-          return <MuridTugas db={db} currentUser={currentUser} initialTugasId={activeSubParam} />;
+        case 'tugas':
+          return (
+            <MuridTugas
+              db={db}
+              currentUser={currentUser}
+              initialTugasId={activeSubParam}
+              onClearParam={() => setActiveSubParam(undefined)}
+            />
+          );
         case 'quiz-saya':
-          return <MuridQuiz db={db} currentUser={currentUser} initialQuizId={activeSubParam} />;
+        case 'quiz':
+        case 'kuis':
+          return (
+            <MuridQuiz
+              db={db}
+              currentUser={currentUser}
+              initialQuizId={activeSubParam}
+              onClearParam={() => setActiveSubParam(undefined)}
+            />
+          );
         case 'penilaian-teman-saya':
         case 'penilaian-teman':
           return <PenilaianTemanSejawatManager db={db} currentUser={currentUser} />;
         case 'refleksi-saya':
+        case 'refleksi':
           return <MuridRefleksi db={db} currentUser={currentUser} />;
         case 'nilai-saya':
+        case 'nilai':
           return <MuridNilai db={db} currentUser={currentUser} />;
         case 'sikap-saya':
         case 'penilaian-sikap-saya':
         case 'penilaian-sikap':
+        case 'sikap':
           return <PenilaianSikapManager db={db} currentUser={currentUser} />;
         case 'presensi-saya':
+        case 'presensi':
           return <MuridPresensi db={db} currentUser={currentUser} />;
         case 'profil-saya':
+        case 'profil':
           return (
             <ProfilMandiri
               db={db}

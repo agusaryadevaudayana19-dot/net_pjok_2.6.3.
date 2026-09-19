@@ -29,13 +29,38 @@ interface MuridTugasProps {
   db: LMSDatabase;
   currentUser: User;
   initialTugasId?: string;
+  onClearParam?: () => void;
 }
 
-export const MuridTugas: React.FC<MuridTugasProps> = ({ db, currentUser, initialTugasId }) => {
+export const MuridTugas: React.FC<MuridTugasProps> = ({ db, currentUser, initialTugasId, onClearParam }) => {
   const [filterStatus, setFilterStatus] = useState<'semua' | 'belum' | 'dikumpulkan' | 'dinilai'>(
     'semua'
   );
   const [activeUploadTugas, setActiveUploadTugas] = useState<Tugas | null>(null);
+
+  const openedInitialIdRef = React.useRef<string | null>(null);
+  const dismissedInitialIdRef = React.useRef<string | null>(null);
+
+  const handleCloseModal = () => {
+    if (initialTugasId) {
+      dismissedInitialIdRef.current = initialTugasId;
+    }
+    setActiveUploadTugas(null);
+    if (onClearParam) {
+      onClearParam();
+    }
+  };
+
+  // Keyboard Escape listener to close upload modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && activeUploadTugas) {
+        handleCloseModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeUploadTugas, initialTugasId]);
 
   // In-app media viewer
   const [mediaModal, setMediaModal] = useState<{
@@ -107,8 +132,15 @@ export const MuridTugas: React.FC<MuridTugasProps> = ({ db, currentUser, initial
   // Auto-open upload submission modal if initialTugasId is provided via notification
   useEffect(() => {
     if (initialTugasId && db.tugas.length > 0) {
+      if (
+        dismissedInitialIdRef.current === initialTugasId ||
+        openedInitialIdRef.current === initialTugasId
+      ) {
+        return;
+      }
       const found = db.tugas.find((t) => t.id === initialTugasId);
       if (found) {
+        openedInitialIdRef.current = initialTugasId;
         handleOpenUpload(found);
       }
     }
@@ -183,7 +215,7 @@ export const MuridTugas: React.FC<MuridTugasProps> = ({ db, currentUser, initial
     });
 
     alert('Tugas berhasil dikumpulkan dan tersimpan!');
-    setActiveUploadTugas(null);
+    handleCloseModal();
   };
 
   return (
@@ -445,11 +477,19 @@ export const MuridTugas: React.FC<MuridTugasProps> = ({ db, currentUser, initial
 
       {/* Upload Submission Modal */}
       {activeUploadTugas && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-2xs p-4 overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-2xs p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleCloseModal();
+            }
+          }}
+        >
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl relative my-8">
             <button
-              onClick={() => setActiveUploadTugas(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600"
+              onClick={handleCloseModal}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Tutup lembar tugas"
             >
               <X className="w-5 h-5" />
             </button>
@@ -696,8 +736,8 @@ export const MuridTugas: React.FC<MuridTugasProps> = ({ db, currentUser, initial
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setActiveUploadTugas(null)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold"
+                  onClick={handleCloseModal}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer"
                 >
                   Batal
                 </button>

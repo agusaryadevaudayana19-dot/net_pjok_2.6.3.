@@ -1619,6 +1619,8 @@ class DataStorageService {
           dibaca: false,
           targetRole: 'MURID',
           targetId: item.id,
+          targetKelasId: item.targetKelasId || 'ALL',
+          targetKelasNama: item.targetKelasNama || 'Semua Kelas',
           isUrgentDeadline: item.prioritas === 'Mendesak' || item.prioritas === 'Penting',
         };
         updatedNotifikasi = [notif, ...updatedNotifikasi];
@@ -1676,6 +1678,22 @@ class DataStorageService {
         ...prev,
         pengumuman: list,
         notifikasi: notifList,
+      };
+    });
+  }
+
+  /**
+   * Menambahkan atau memperbarui notifikasi sistem untuk murid / guru
+   */
+  public pushNotifikasi(item: NotifikasiItem): void {
+    this.updateDatabase((prev) => {
+      // Hapus notifikasi lama dengan targetId dan tipe yang sama untuk mencegah duplikasi
+      const existing = (prev.notifikasi || []).filter(
+        (n) => !(n.targetId === item.targetId && n.tipe === item.tipe && n.targetMuridId === item.targetMuridId)
+      );
+      return {
+        ...prev,
+        notifikasi: [item, ...existing],
       };
     });
   }

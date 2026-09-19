@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Megaphone,
   Pin,
@@ -30,6 +30,7 @@ interface MuridPengumumanViewProps {
   currentUser: User;
   onNavigate?: (menuId: string, param?: string) => void;
   initialPengumumanId?: string;
+  onClearParam?: () => void;
 }
 
 export const MuridPengumumanView: React.FC<MuridPengumumanViewProps> = ({
@@ -37,6 +38,7 @@ export const MuridPengumumanView: React.FC<MuridPengumumanViewProps> = ({
   currentUser,
   onNavigate,
   initialPengumumanId,
+  onClearParam,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKategori, setSelectedKategori] = useState<string>('SEMUA');
@@ -78,16 +80,47 @@ export const MuridPengumumanView: React.FC<MuridPengumumanViewProps> = ({
     dataStorage.markPengumumanDibaca(p.id, currentUser.id);
   };
 
+  const openedInitialIdRef = useRef<string | null>(null);
+  const dismissedInitialIdRef = useRef<string | null>(null);
+
   const handleOpenDetail = (p: Pengumuman) => {
     handleMarkAsRead(p);
     setSelectedPengumuman(p);
   };
 
+  const handleCloseModal = () => {
+    if (initialPengumumanId) {
+      dismissedInitialIdRef.current = initialPengumumanId;
+    }
+    setSelectedPengumuman(null);
+    if (onClearParam) {
+      onClearParam();
+    }
+  };
+
+  // Keyboard Escape listener to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedPengumuman) {
+        handleCloseModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPengumuman, initialPengumumanId]);
+
   // Auto-open announcement if requested via notification or parameter
   useEffect(() => {
     if (initialPengumumanId && (db.pengumuman || []).length > 0) {
+      if (
+        dismissedInitialIdRef.current === initialPengumumanId ||
+        openedInitialIdRef.current === initialPengumumanId
+      ) {
+        return;
+      }
       const found = (db.pengumuman || []).find((p) => p.id === initialPengumumanId);
       if (found) {
+        openedInitialIdRef.current = initialPengumumanId;
         handleOpenDetail(found);
       }
     }
@@ -677,13 +710,21 @@ export const MuridPengumumanView: React.FC<MuridPengumumanViewProps> = ({
 
       {/* Detail Modal Popup */}
       {selectedPengumuman && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-150">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleCloseModal();
+            }
+          }}
+        >
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative my-8 space-y-5">
             {/* Close Button */}
             <button
               type="button"
-              onClick={() => setSelectedPengumuman(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              onClick={handleCloseModal}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Tutup Pengumuman"
             >
               <X className="w-5 h-5" />
             </button>
@@ -780,12 +821,12 @@ export const MuridPengumumanView: React.FC<MuridPengumumanViewProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedPengumuman(null);
+                      handleCloseModal();
                       if (selectedPengumuman.tautanAksi?.menuTarget) {
                         onNavigate(selectedPengumuman.tautanAksi.menuTarget, selectedPengumuman.tautanAksi.targetId);
                       }
                     }}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>{selectedPengumuman.tautanAksi.label}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -794,7 +835,7 @@ export const MuridPengumumanView: React.FC<MuridPengumumanViewProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setSelectedPengumuman(null)}
+                  onClick={handleCloseModal}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Tutup

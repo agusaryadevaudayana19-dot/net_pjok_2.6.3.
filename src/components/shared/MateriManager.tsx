@@ -20,7 +20,7 @@ import {
   Upload,
   Image as ImageIcon,
 } from 'lucide-react';
-import { Materi, User, getTeacherAssignedClasses } from '../../types';
+import { Materi, User, NotifikasiItem, getTeacherAssignedClasses } from '../../types';
 import { dataStorage, LMSDatabase } from '../../services/dataStorage';
 import { InAppMediaModal, parseMediaUrl } from './InAppMediaModal';
 import { UploadDataModal } from './UploadDataModal';
@@ -252,6 +252,22 @@ export const MateriManager: React.FC<MateriManagerProps> = ({ db, currentUser })
             : m
         ),
       }));
+
+      // If updated to Publish from non-Publish or edited active materi
+      if (form.status === 'Publish') {
+        const notif: NotifikasiItem = {
+          id: `notif-mat-${Date.now()}`,
+          judul: `Materi Pelajaran: ${form.judul || editingMateri.judul}`,
+          pesan: `${currentUser.name} memperbarui modul materi "${form.judul || editingMateri.judul}". Silakan buka untuk membaca.`,
+          waktu: 'Baru saja',
+          tipe: 'materi',
+          dibaca: false,
+          targetRole: 'MURID',
+          targetId: editingMateri.id,
+          targetKelasId: form.kelasIds && form.kelasIds.length === 1 ? form.kelasIds[0] : 'ALL',
+        };
+        dataStorage.pushNotifikasi(notif);
+      }
     } else {
       const newM: Materi = {
         id: `mat-${Date.now()}`,
@@ -277,6 +293,22 @@ export const MateriManager: React.FC<MateriManagerProps> = ({ db, currentUser })
         ...prev,
         materi: [newM, ...prev.materi],
       }));
+
+      // Push notification for students if published
+      if (newM.status === 'Publish') {
+        const notif: NotifikasiItem = {
+          id: `notif-mat-${Date.now()}`,
+          judul: `Materi Baru: ${newM.judul}`,
+          pesan: `${currentUser.name} mempublikasikan modul materi baru: "${newM.judul}". Silakan pelajari materinya.`,
+          waktu: 'Baru saja',
+          tipe: 'materi',
+          dibaca: false,
+          targetRole: 'MURID',
+          targetId: newM.id,
+          targetKelasId: newM.kelasIds && newM.kelasIds.length === 1 ? newM.kelasIds[0] : 'ALL',
+        };
+        dataStorage.pushNotifikasi(notif);
+      }
     }
 
     setToastFeedback({

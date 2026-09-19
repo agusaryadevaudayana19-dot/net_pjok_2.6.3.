@@ -516,10 +516,12 @@ export interface NotifikasiItem {
   judul: string;
   pesan: string;
   waktu: string;
-  tipe: 'tugas' | 'quiz' | 'nilai' | 'pengumuman' | 'presensi' | 'deadline';
+  tipe: 'tugas' | 'quiz' | 'nilai' | 'pengumuman' | 'presensi' | 'deadline' | 'materi' | string;
   dibaca: boolean;
   targetRole?: UserRole;
   targetMuridId?: string;
+  targetKelasId?: string;
+  targetKelasNama?: string;
   targetId?: string;
   isUrgentDeadline?: boolean;
 }

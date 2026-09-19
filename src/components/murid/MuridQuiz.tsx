@@ -31,9 +31,10 @@ interface MuridQuizProps {
   currentUser: User;
   db: LMSDatabase;
   initialQuizId?: string;
+  onClearParam?: () => void;
 }
 
-export function MuridQuiz({ currentUser, db, initialQuizId }: MuridQuizProps) {
+export function MuridQuiz({ currentUser, db, initialQuizId, onClearParam }: MuridQuizProps) {
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [currentSoalIndex, setCurrentSoalIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -43,6 +44,9 @@ export function MuridQuiz({ currentUser, db, initialQuizId }: MuridQuizProps) {
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
   const [tabSwitchAlert, setTabSwitchAlert] = useState<string | null>(null);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
+
+  const openedInitialIdRef = useRef<string | null>(null);
+  const dismissedInitialIdRef = useRef<string | null>(null);
 
   // Local state for interactive matching / tarik garis
   // Map of leftItem -> rightItem for the active question
@@ -248,8 +252,15 @@ export function MuridQuiz({ currentUser, db, initialQuizId }: MuridQuizProps) {
   // Auto-launch quiz if initialQuizId is provided via notification
   useEffect(() => {
     if (initialQuizId && (db.quiz || []).length > 0 && !activeQuiz) {
+      if (
+        dismissedInitialIdRef.current === initialQuizId ||
+        openedInitialIdRef.current === initialQuizId
+      ) {
+        return;
+      }
       const found = (db.quiz || []).find((q) => q.id === initialQuizId);
       if (found) {
+        openedInitialIdRef.current = initialQuizId;
         const hasTaken = (db.jawabanQuiz || []).some(
           (j) => j.quizId === found.id && j.muridId === currentUser.id
         );

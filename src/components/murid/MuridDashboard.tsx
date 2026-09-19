@@ -264,7 +264,7 @@ export const MuridDashboard: React.FC<MuridDashboardProps> = ({ db, currentUser,
                 tugasMendekatiDeadline.map((t) => (
                   <div
                     key={`deadline-${t.id}`}
-                    onClick={() => onNavigate('tugas-saya')}
+                    onClick={() => onNavigate('tugas-saya', t.id)}
                     className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 hover:shadow-md ${
                       t.isOverdue
                         ? 'bg-rose-50/60 border-rose-200 text-rose-950 hover:bg-rose-50'
@@ -326,7 +326,7 @@ export const MuridDashboard: React.FC<MuridDashboardProps> = ({ db, currentUser,
               {tugasBaru.map((t) => (
                 <div
                   key={`baru-${t.id}`}
-                  onClick={() => onNavigate('tugas-saya')}
+                  onClick={() => onNavigate('tugas-saya', t.id)}
                   className="p-3.5 rounded-2xl bg-sky-50/40 border border-sky-100 hover:border-sky-300 hover:bg-sky-50/80 transition-all cursor-pointer flex flex-col justify-between gap-2.5 hover:shadow-md"
                 >
                   <div>
@@ -510,7 +510,7 @@ export const MuridDashboard: React.FC<MuridDashboardProps> = ({ db, currentUser,
               relevantPengumuman.slice(0, 3).map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => onNavigate('pengumuman')}
+                  onClick={() => onNavigate('pengumuman', item.id)}
                   className={`p-3 rounded-xl border space-y-1.5 cursor-pointer transition-all hover:shadow-xs ${
                     item.prioritas === 'PENTING'
                       ? 'bg-rose-50/70 border-rose-100 text-rose-950'

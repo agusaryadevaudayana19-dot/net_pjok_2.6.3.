@@ -22,6 +22,10 @@ import {
   UploadCloud,
   DownloadCloud,
   X,
+  Megaphone,
+  ClipboardList,
+  CheckCircle,
+  CalendarCheck,
 } from 'lucide-react';
 import { User, UserRole, PengaturanSekolah, resolveKelasId, APP_VERSION_LABEL } from '../types';
 import { dataStorage, LMSDatabase, FirestoreSyncStatus } from '../services/dataStorage';
@@ -139,13 +143,157 @@ export const Navbar: React.FC<NavbarProps> = ({
     handleMarkNotifRead(item.id);
     setShowNotifMenu(false);
     if (!onSelectMenuItem) return;
-    if (item.tipe === 'tugas') {
-      onSelectMenuItem('tugas-saya', item.targetId);
-    } else if (item.tipe === 'quiz') {
-      onSelectMenuItem('quiz-saya', item.targetId);
-    } else if (item.tipe === 'presensi') {
-      onSelectMenuItem(currentUser.role === 'MURID' ? 'presensi-saya' : 'presensi');
+
+    const isMurid = currentUser.role === 'MURID';
+    const isGuru = currentUser.role === 'GURU';
+    const isAdmin = currentUser.role === 'ADMIN';
+    const tipe = (item.tipe || '').toLowerCase().trim();
+    const judul = (item.judul || '').toLowerCase();
+    const pesan = (item.pesan || '').toLowerCase();
+    const targetId = item.targetId;
+
+    // 1. Explicit Tipe Routing
+    if (tipe === 'pengumuman' || tipe === 'informasi') {
+      onSelectMenuItem('pengumuman', targetId);
+      return;
     }
+
+    if (tipe === 'tugas') {
+      onSelectMenuItem(isMurid ? 'tugas-saya' : 'tugas', targetId);
+      return;
+    }
+
+    if (tipe === 'quiz' || tipe === 'kuis' || tipe === 'asesmen') {
+      onSelectMenuItem(isMurid ? 'quiz-saya' : 'quiz', targetId);
+      return;
+    }
+
+    if (tipe === 'materi' || tipe === 'modul') {
+      onSelectMenuItem(isMurid ? 'materi-saya' : 'materi', targetId);
+      return;
+    }
+
+    if (tipe === 'presensi' || tipe === 'kehadiran' || tipe === 'absensi') {
+      onSelectMenuItem(isMurid ? 'presensi-saya' : 'presensi', targetId);
+      return;
+    }
+
+    if (tipe === 'izin' || tipe === 'surat-izin' || tipe === 'pengajuan-izin') {
+      onSelectMenuItem(isMurid ? 'presensi-saya' : (isGuru || isAdmin ? 'surat-izin' : 'presensi'), targetId);
+      return;
+    }
+
+    if (tipe === 'nilai' || tipe === 'rapor') {
+      onSelectMenuItem(isMurid ? 'nilai-saya' : 'nilai', targetId);
+      return;
+    }
+
+    if (tipe === 'sikap' || tipe === 'penilaian-sikap') {
+      onSelectMenuItem(isMurid ? 'sikap-saya' : 'penilaian-sikap', targetId);
+      return;
+    }
+
+    if (tipe === 'penilaian-teman' || tipe === 'teman-sejawat') {
+      onSelectMenuItem(isMurid ? 'penilaian-teman-saya' : 'penilaian-teman', targetId);
+      return;
+    }
+
+    if (tipe === 'refleksi') {
+      onSelectMenuItem(isMurid ? 'refleksi-saya' : 'refleksi', targetId);
+      return;
+    }
+
+    if (tipe === 'praktik' || tipe === 'penilaian-praktik') {
+      onSelectMenuItem(isMurid ? 'nilai-saya' : 'praktik', targetId);
+      return;
+    }
+
+    if (tipe === 'deadline') {
+      if (targetId && db.quiz?.some((q) => q.id === targetId)) {
+        onSelectMenuItem(isMurid ? 'quiz-saya' : 'quiz', targetId);
+        return;
+      }
+      onSelectMenuItem(isMurid ? 'tugas-saya' : 'tugas', targetId);
+      return;
+    }
+
+    // 2. Target ID entity matching
+    if (targetId) {
+      if (db.pengumuman?.some((p) => p.id === targetId)) {
+        onSelectMenuItem('pengumuman', targetId);
+        return;
+      }
+      if (db.tugas?.some((t) => t.id === targetId)) {
+        onSelectMenuItem(isMurid ? 'tugas-saya' : 'tugas', targetId);
+        return;
+      }
+      if (db.quiz?.some((q) => q.id === targetId)) {
+        onSelectMenuItem(isMurid ? 'quiz-saya' : 'quiz', targetId);
+        return;
+      }
+      if (db.materi?.some((m) => m.id === targetId)) {
+        onSelectMenuItem(isMurid ? 'materi-saya' : 'materi', targetId);
+        return;
+      }
+      if (db.refleksi?.some((r) => r.id === targetId)) {
+        onSelectMenuItem(isMurid ? 'refleksi-saya' : 'refleksi', targetId);
+        return;
+      }
+    }
+
+    // 3. Keyword heuristic on Judul & Pesan
+    if (judul.includes('pengumuman') || pesan.includes('pengumuman') || judul.includes('informasi')) {
+      onSelectMenuItem('pengumuman', targetId);
+      return;
+    }
+
+    if (judul.includes('tugas') || pesan.includes('tugas')) {
+      onSelectMenuItem(isMurid ? 'tugas-saya' : 'tugas', targetId);
+      return;
+    }
+
+    if (judul.includes('quiz') || judul.includes('kuis') || pesan.includes('quiz') || pesan.includes('kuis')) {
+      onSelectMenuItem(isMurid ? 'quiz-saya' : 'quiz', targetId);
+      return;
+    }
+
+    if (judul.includes('materi') || pesan.includes('materi') || judul.includes('modul')) {
+      onSelectMenuItem(isMurid ? 'materi-saya' : 'materi', targetId);
+      return;
+    }
+
+    if (judul.includes('absen') || judul.includes('presensi') || judul.includes('kehadiran') || pesan.includes('presensi')) {
+      onSelectMenuItem(isMurid ? 'presensi-saya' : 'presensi', targetId);
+      return;
+    }
+
+    if (judul.includes('izin') || pesan.includes('izin')) {
+      onSelectMenuItem(isMurid ? 'presensi-saya' : 'surat-izin', targetId);
+      return;
+    }
+
+    if (judul.includes('nilai') || pesan.includes('nilai') || judul.includes('rapor')) {
+      onSelectMenuItem(isMurid ? 'nilai-saya' : 'nilai', targetId);
+      return;
+    }
+
+    if (judul.includes('sikap') || pesan.includes('sikap')) {
+      onSelectMenuItem(isMurid ? 'sikap-saya' : 'penilaian-sikap', targetId);
+      return;
+    }
+
+    if (judul.includes('teman') || pesan.includes('teman sejawat')) {
+      onSelectMenuItem(isMurid ? 'penilaian-teman-saya' : 'penilaian-teman', targetId);
+      return;
+    }
+
+    if (judul.includes('refleksi') || pesan.includes('refleksi')) {
+      onSelectMenuItem(isMurid ? 'refleksi-saya' : 'refleksi', targetId);
+      return;
+    }
+
+    // Default Fallback
+    onSelectMenuItem(isMurid ? 'pengumuman' : 'dashboard', targetId);
   };
 
   // Search filtering
@@ -671,9 +819,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
                             <AlertTriangle className="w-3.5 h-3.5" />
                           </div>
+                        ) : item.tipe === 'pengumuman' ? (
+                          <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                            <Megaphone className="w-3.5 h-3.5" />
+                          </div>
                         ) : item.tipe === 'tugas' ? (
                           <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                            <ClipboardList className="w-3.5 h-3.5" />
+                          </div>
+                        ) : item.tipe === 'quiz' || item.tipe === 'kuis' ? (
+                          <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                          </div>
+                        ) : item.tipe === 'materi' ? (
+                          <div className="w-6 h-6 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center">
                             <BookOpen className="w-3.5 h-3.5" />
+                          </div>
+                        ) : item.tipe === 'presensi' || item.tipe === 'izin' ? (
+                          <div className="w-6 h-6 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center">
+                            <CalendarCheck className="w-3.5 h-3.5" />
                           </div>
                         ) : (
                           <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">

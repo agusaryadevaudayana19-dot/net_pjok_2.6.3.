@@ -342,13 +342,20 @@ export default function App() {
         case 'dashboard':
           return <MuridDashboard db={db} currentUser={currentUser} onNavigate={handleNavigate} />;
         case 'pengumuman':
-          return <MuridPengumumanView db={db} currentUser={currentUser} onNavigate={handleNavigate} />;
+          return (
+            <MuridPengumumanView
+              db={db}
+              currentUser={currentUser}
+              onNavigate={handleNavigate}
+              initialPengumumanId={activeSubParam}
+            />
+          );
         case 'materi-saya':
           return <MuridMateri db={db} currentUser={currentUser} initialMateriId={activeSubParam} />;
         case 'tugas-saya':
-          return <MuridTugas db={db} currentUser={currentUser} />;
+          return <MuridTugas db={db} currentUser={currentUser} initialTugasId={activeSubParam} />;
         case 'quiz-saya':
-          return <MuridQuiz db={db} currentUser={currentUser} />;
+          return <MuridQuiz db={db} currentUser={currentUser} initialQuizId={activeSubParam} />;
         case 'penilaian-teman-saya':
         case 'penilaian-teman':
           return <PenilaianTemanSejawatManager db={db} currentUser={currentUser} />;
@@ -403,8 +410,7 @@ export default function App() {
           onOpenProfileModal={() => setIsProfileModalOpen(true)}
           onSwitchRole={handleRoleSwitch}
           onSelectMenuItem={(menuId, param) => {
-            handleNavigate(menuId);
-            if (param) setActiveSubParam(param);
+            handleNavigate(menuId, param);
           }}
           settings={db.settings}
         />

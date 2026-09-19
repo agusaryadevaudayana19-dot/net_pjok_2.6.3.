@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Megaphone,
   Pin,
@@ -29,12 +29,14 @@ interface MuridPengumumanViewProps {
   db: LMSDatabase;
   currentUser: User;
   onNavigate?: (menuId: string, param?: string) => void;
+  initialPengumumanId?: string;
 }
 
 export const MuridPengumumanView: React.FC<MuridPengumumanViewProps> = ({
   db,
   currentUser,
   onNavigate,
+  initialPengumumanId,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKategori, setSelectedKategori] = useState<string>('SEMUA');
@@ -80,6 +82,16 @@ export const MuridPengumumanView: React.FC<MuridPengumumanViewProps> = ({
     handleMarkAsRead(p);
     setSelectedPengumuman(p);
   };
+
+  // Auto-open announcement if requested via notification or parameter
+  useEffect(() => {
+    if (initialPengumumanId && (db.pengumuman || []).length > 0) {
+      const found = (db.pengumuman || []).find((p) => p.id === initialPengumumanId);
+      if (found) {
+        handleOpenDetail(found);
+      }
+    }
+  }, [initialPengumumanId, db.pengumuman]);
 
   const handleShare = (p: Pengumuman) => {
     if (navigator.clipboard) {

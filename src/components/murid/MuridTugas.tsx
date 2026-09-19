@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ClipboardList,
   Upload,
@@ -28,9 +28,10 @@ import { parseDeadlineToDate, formatTimeRemaining } from '../../utils/deadlineNo
 interface MuridTugasProps {
   db: LMSDatabase;
   currentUser: User;
+  initialTugasId?: string;
 }
 
-export const MuridTugas: React.FC<MuridTugasProps> = ({ db, currentUser }) => {
+export const MuridTugas: React.FC<MuridTugasProps> = ({ db, currentUser, initialTugasId }) => {
   const [filterStatus, setFilterStatus] = useState<'semua' | 'belum' | 'dikumpulkan' | 'dinilai'>(
     'semua'
   );
@@ -102,6 +103,16 @@ export const MuridTugas: React.FC<MuridTugasProps> = ({ db, currentUser }) => {
       setUploadedFile(null);
     }
   };
+
+  // Auto-open upload submission modal if initialTugasId is provided via notification
+  useEffect(() => {
+    if (initialTugasId && db.tugas.length > 0) {
+      const found = db.tugas.find((t) => t.id === initialTugasId);
+      if (found) {
+        handleOpenUpload(found);
+      }
+    }
+  }, [initialTugasId, db.tugas]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

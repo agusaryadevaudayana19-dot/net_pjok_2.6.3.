@@ -30,9 +30,10 @@ import { parseDeadlineToDate, formatTimeRemaining } from '../../utils/deadlineNo
 interface MuridQuizProps {
   currentUser: User;
   db: LMSDatabase;
+  initialQuizId?: string;
 }
 
-export function MuridQuiz({ currentUser, db }: MuridQuizProps) {
+export function MuridQuiz({ currentUser, db, initialQuizId }: MuridQuizProps) {
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [currentSoalIndex, setCurrentSoalIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -243,6 +244,21 @@ export function MuridQuiz({ currentUser, db }: MuridQuizProps) {
     setTabSwitchAlert(null);
     setTabSwitchCount(0);
   };
+
+  // Auto-launch quiz if initialQuizId is provided via notification
+  useEffect(() => {
+    if (initialQuizId && (db.quiz || []).length > 0 && !activeQuiz) {
+      const found = (db.quiz || []).find((q) => q.id === initialQuizId);
+      if (found) {
+        const hasTaken = (db.jawabanQuiz || []).some(
+          (j) => j.quizId === found.id && j.muridId === currentUser.id
+        );
+        if (!hasTaken) {
+          handleStartQuiz(found);
+        }
+      }
+    }
+  }, [initialQuizId, db.quiz, activeQuiz, currentUser.id]);
 
   const handleSelectAnswer = (soalId: string, answer: string) => {
     setAnswers((prev) => ({ ...prev, [soalId]: answer }));

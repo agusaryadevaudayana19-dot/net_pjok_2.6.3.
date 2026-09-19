@@ -109,6 +109,23 @@ export default function App() {
     };
   }, []);
 
+  // Dynamically update favicon and app icons when school logo is customized or defaults to NET PJOK
+  useEffect(() => {
+    const customLogo = db.settings?.logoSekolah;
+    const targetIcon = customLogo && customLogo.trim() !== '' ? customLogo : '/favicon.svg';
+    const targetApple = customLogo && customLogo.trim() !== '' ? customLogo : '/apple-touch-icon.png';
+
+    const iconElements = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
+    iconElements.forEach((el) => {
+      el.href = targetIcon;
+    });
+
+    const appleIcon = document.querySelector<HTMLLinkElement>("link[rel='apple-touch-icon']");
+    if (appleIcon) {
+      appleIcon.href = targetApple;
+    }
+  }, [db.settings?.logoSekolah]);
+
   // Sync deadline notifications for student (< 24 hours alerts)
   useEffect(() => {
     if (currentUser?.role === 'MURID') {

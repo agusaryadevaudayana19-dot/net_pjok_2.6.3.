@@ -7,6 +7,7 @@ import {
   AlertCircle,
   HelpCircle,
   ArrowRight,
+  Zap,
 } from 'lucide-react';
 import { User, PengaturanSekolah } from '../types';
 import { dataStorage } from '../services/dataStorage';
@@ -196,10 +197,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, settings }
           
           <div className="mb-6 text-center">
             {/* Elegant Emblem Badge */}
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/25 font-black text-xl mb-3 border border-blue-400/20">
-              PJOK
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/25 mb-3 border border-white/10 overflow-hidden">
+              {(settings?.logoSekolah || db.settings?.logoSekolah) ? (
+                <img
+                  src={settings?.logoSekolah || db.settings?.logoSekolah}
+                  alt="NET PJOK"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Zap className="w-7 h-7 text-white fill-white" />
+              )}
             </div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">Masuk ke Akun</h2>
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <span className="font-black text-lg text-white tracking-tight">NET PJOK</span>
+              <span className="text-[10px] font-black bg-blue-500/20 text-blue-300 border border-blue-400/30 px-1.5 py-0.5 rounded leading-none">
+                SMANSAKA
+              </span>
+            </div>
+            <h2 className="text-xl font-bold text-white tracking-tight">Masuk ke Akun</h2>
             <p className="text-xs text-slate-400 mt-1">{schoolName}</p>
           </div>
 

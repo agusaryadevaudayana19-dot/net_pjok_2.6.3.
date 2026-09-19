@@ -352,7 +352,8 @@ export interface DimensiAsesmenItem {
 
 export interface DimensiTemanSejawatConfig {
   id: string;
-  kelasId: string; // 'all' atau ID kelas spesifik
+  kelasId: string; // 'all' atau ID kelas spesifik (atau ID pertama)
+  kelasIds?: string[]; // Mendukung lebih dari 1 kelas sekaligus (misal pembelajaran gabungan 3 rombel)
   kegiatan?: string;
   dimensiList: DimensiAsesmenItem[];
   updatedAt?: string;
@@ -593,6 +594,8 @@ export interface Pengumuman {
   targetRole?: 'ALL' | 'MURID' | 'GURU';
   targetKelasId?: string; // 'ALL' or specific kelas id e.g. 'cls-xi-1'
   targetKelasNama?: string;
+  targetKelasIds?: string[]; // Mendukung pemilihan lebih dari 1 kelas rombel target
+  targetKelasNamas?: string[];
   prioritas?: 'Biasa' | 'Penting' | 'Mendesak';
   lampiranUrl?: string;
   namaLampiran?: string;

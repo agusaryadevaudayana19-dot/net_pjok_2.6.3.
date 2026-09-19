@@ -44,6 +44,8 @@ import { ContentManager } from './components/shared/ContentManager';
 import { AttendanceManager } from './components/shared/AttendanceManager';
 import { GradesReport } from './components/shared/GradesReport';
 import { PraktikAssessment } from './components/shared/PraktikAssessment';
+import { RekapanPenilaianPraktik } from './components/shared/RekapanPenilaianPraktik';
+import { RekapanHasilQuiz } from './components/shared/RekapanHasilQuiz';
 import { ProfilMandiri } from './components/shared/ProfilMandiri';
 import { ProfilModal } from './components/shared/ProfilModal';
 import { LoginPage } from './components/LoginPage';
@@ -234,6 +236,22 @@ export default function App() {
           return <QuizManager db={db} currentUser={currentUser} />;
         case 'praktik':
           return <PraktikAssessment db={db} currentUser={currentUser} />;
+        case 'rekap-praktik':
+          return (
+            <RekapanPenilaianPraktik
+              db={db}
+              currentUser={currentUser}
+              onNavigatePraktik={() => setActiveMenu('praktik')}
+            />
+          );
+        case 'rekap-quiz':
+          return (
+            <RekapanHasilQuiz
+              db={db}
+              currentUser={currentUser}
+              onNavigateQuiz={() => setActiveMenu('quiz')}
+            />
+          );
         case 'penilaian-harian':
           return <PenilaianHarianManager db={db} currentUser={currentUser} />;
         case 'penilaian-sikap':
@@ -323,6 +341,22 @@ export default function App() {
           return <QuizManager db={db} currentUser={currentUser} />;
         case 'praktik':
           return <PraktikAssessment db={db} currentUser={currentUser} />;
+        case 'rekap-praktik':
+          return (
+            <RekapanPenilaianPraktik
+              db={db}
+              currentUser={currentUser}
+              onNavigatePraktik={() => setActiveMenu('praktik')}
+            />
+          );
+        case 'rekap-quiz':
+          return (
+            <RekapanHasilQuiz
+              db={db}
+              currentUser={currentUser}
+              onNavigateQuiz={() => setActiveMenu('quiz')}
+            />
+          );
         case 'penilaian-harian':
           return <PenilaianHarianManager db={db} currentUser={currentUser} />;
         case 'penilaian-sikap':

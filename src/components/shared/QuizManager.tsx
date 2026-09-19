@@ -29,9 +29,10 @@ import { UploadDataModal } from './UploadDataModal';
 interface QuizManagerProps {
   db: LMSDatabase;
   currentUser: User;
+  initialTab?: 'quiz' | 'hasil';
 }
 
-export const QuizManager: React.FC<QuizManagerProps> = ({ db, currentUser }) => {
+export const QuizManager: React.FC<QuizManagerProps> = ({ db, currentUser, initialTab = 'quiz' }) => {
   const availableClasses = React.useMemo(() => {
     if (currentUser?.role === 'GURU') {
       const assigned = getTeacherAssignedClasses(currentUser, db.kelas);
@@ -40,7 +41,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ db, currentUser }) => 
     return db.kelas;
   }, [currentUser, db.kelas]);
 
-  const [selectedTab, setSelectedTab] = useState<'quiz' | 'hasil'>('quiz');
+  const [selectedTab, setSelectedTab] = useState<'quiz' | 'hasil'>(initialTab);
   const [selectedQuizId, setSelectedQuizId] = useState<string>('Semua');
   const [selectedKelasId, setSelectedKelasId] = useState<string>('Semua');
   const [filterPublikasi, setFilterPublikasi] = useState<'Semua' | 'Publish' | 'Draft'>('Semua');

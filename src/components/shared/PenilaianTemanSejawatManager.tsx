@@ -119,9 +119,9 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
   const [formDimensiScores, setFormDimensiScores] = useState<Record<string, number>>({});
   const [formSimpanSebagaiDimensiKelas, setFormSimpanSebagaiDimensiKelas] = useState(true);
 
-  // Dedicated Modal State for Teacher to Manage Dimensions
+  // Dedicated Modal State for Teacher to Manage Dimensions (supports multiple classes)
   const [isDimensiModalOpen, setIsDimensiModalOpen] = useState(false);
-  const [manageKelasId, setManageKelasId] = useState(selectedKelasId);
+  const [manageKelasIds, setManageKelasIds] = useState<string[]>([selectedKelasId]);
   const [manageKegiatan, setManageKegiatan] = useState(classDimensiConfig?.kegiatan || 'Praktik Permainan Beregu Bola Voli');
   const [manageDimensiItems, setManageDimensiItems] = useState<DimensiAsesmenItem[]>(DEFAULT_DIMENSI_TEMAN_SEJAWAT);
 
@@ -142,7 +142,7 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [db.penilaianTemanSejawat, selectedKelasId]);
 
-  // Aggregated score per target student
+  // Aggregated score per target student + list of peer evaluators (nama yang menilai)
   const peerStatsByStudent = useMemo(() => {
     const map = new Map<
       string,
@@ -156,6 +156,8 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
         tanggungJawabTotal: number;
         comments: string[];
         links: { url: string; label: string }[];
+        penilaiNames: string[];
+        penilaiDetails: { nama: string; skor: number; tanggal?: string }[];
       }
     >();
 
@@ -170,6 +172,8 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
         tanggungJawabTotal: 0,
         comments: [],
         links: [],
+        penilaiNames: [],
+        penilaiDetails: [],
       };
       const avgThis =
         r.rataRata || (r.skorKerjaSama + r.skorSportivitas + r.skorKomunikasi + r.skorTanggungJawab) / 4;
@@ -179,6 +183,18 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
       existing.sportivitasTotal += r.skorSportivitas || 5;
       existing.komunikasiTotal += r.skorKomunikasi || 5;
       existing.tanggungJawabTotal += r.skorTanggungJawab || 5;
+
+      // Track reviewer names
+      if (r.penilaiNama) {
+        if (!existing.penilaiNames.includes(r.penilaiNama)) {
+          existing.penilaiNames.push(r.penilaiNama);
+        }
+        existing.penilaiDetails.push({
+          nama: r.penilaiNama,
+          skor: Number(avgThis.toFixed(1)),
+          tanggal: r.tanggal,
+        });
+      }
 
       // Track dynamic dimensions
       if (r.dimensiScores && r.dimensiScores.length > 0) {
@@ -311,11 +327,16 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
     setFormDimensiList((prev) => prev.filter((d) => d.id !== id));
   };
 
-  // Open Dedicated Management Modal for Teacher
-  const handleOpenManageDimensi = (targetKelasId = selectedKelasId) => {
-    setManageKelasId(targetKelasId);
+  // Open Dedicated Management Modal for Teacher (Multi-Class Support)
+  const handleOpenManageDimensi = (targetInput: string[] | string = selectedKelasId) => {
+    const initialIds = Array.isArray(targetInput)
+      ? targetInput
+      : [targetInput || selectedKelasId];
+    setManageKelasIds(initialIds.length > 0 ? initialIds : [selectedKelasId]);
+
+    const primaryId = initialIds[0] || selectedKelasId;
     const cfg =
-      (db.dimensiTemanSejawat || []).find((c) => c.kelasId === targetKelasId) ||
+      (db.dimensiTemanSejawat || []).find((c) => c.kelasId === primaryId) ||
       (db.dimensiTemanSejawat || []).find((c) => c.kelasId === 'all');
     setManageKegiatan(cfg?.kegiatan || 'Praktik Permainan Beregu Bola Voli');
     if (cfg?.dimensiList && cfg.dimensiList.length > 0) {
@@ -324,6 +345,28 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
       setManageDimensiItems(DEFAULT_DIMENSI_TEMAN_SEJAWAT.map((d) => ({ ...d })));
     }
     setIsDimensiModalOpen(true);
+  };
+
+  const toggleManageKelas = (kId: string) => {
+    setManageKelasIds((prev) => {
+      if (prev.includes(kId)) {
+        if (prev.length <= 1) return prev; // Keep at least 1 class selected
+        return prev.filter((id) => id !== kId);
+      } else {
+        return [...prev, kId];
+      }
+    });
+  };
+
+  const handleSelectFirst3Classes = () => {
+    const first3 = availableClasses.slice(0, 3).map((k) => k.id);
+    if (first3.length > 0) {
+      setManageKelasIds(first3);
+    }
+  };
+
+  const handleSelectAllAssignedClasses = () => {
+    setManageKelasIds(availableClasses.map((k) => k.id));
   };
 
   const handleAddManageDimension = () => {
@@ -359,27 +402,46 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
       alert('Harap masukkan minimal 1 nama dimensi asesmen!');
       return;
     }
+    if (manageKelasIds.length === 0) {
+      alert('Harap pilih minimal 1 kelas yang akan diatur dimensinya!');
+      return;
+    }
+
     dataStorage.updateDatabase((prev) => {
-      let list = prev.dimensiTemanSejawat || [];
-      const idx = list.findIndex((c) => c.kelasId === manageKelasId);
-      const newConfig: DimensiTemanSejawatConfig = {
-        id: idx >= 0 ? list[idx].id : `dtc-${manageKelasId}-${Date.now()}`,
-        kelasId: manageKelasId,
-        kegiatan: manageKegiatan.trim() || 'Praktik PJOK Bersama',
-        dimensiList: valid,
-        updatedAt: new Date().toISOString(),
-        guruNama: currentUser.name,
-      };
-      if (idx >= 0) {
-        list = [...list.slice(0, idx), newConfig, ...list.slice(idx + 1)];
-      } else {
-        list = [newConfig, ...list];
-      }
+      let list = [...(prev.dimensiTemanSejawat || [])];
+
+      manageKelasIds.forEach((targetKId) => {
+        const idx = list.findIndex((c) => c.kelasId === targetKId);
+        const newConfig: DimensiTemanSejawatConfig = {
+          id: idx >= 0 ? list[idx].id : `dtc-${targetKId}-${Date.now()}`,
+          kelasId: targetKId,
+          kelasIds: manageKelasIds,
+          kegiatan: manageKegiatan.trim() || 'Praktik PJOK Bersama',
+          dimensiList: valid,
+          updatedAt: new Date().toISOString(),
+          guruNama: currentUser.name,
+        };
+        if (idx >= 0) {
+          list[idx] = newConfig;
+        } else {
+          list.push(newConfig);
+        }
+      });
+
       return {
         ...prev,
         dimensiTemanSejawat: list,
       };
     });
+
+    const targetClassNames = (db.kelas || [])
+      .filter((k) => manageKelasIds.includes(k.id))
+      .map((k) => k.nama)
+      .join(', ');
+
+    alert(
+      `Berhasil menyimpan dan menyinkronkan dimensi asesmen untuk ${manageKelasIds.length} kelas sekaligus (${targetClassNames})! Seluruh akun murid di kelas tersebut kini otomatis menggunakan acuan dimensi ini.`
+    );
     setIsDimensiModalOpen(false);
   };
 
@@ -516,6 +578,7 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
       'Nama Siswa',
       'Kelas',
       'Jumlah Teman Penilai',
+      'Nama-Nama Teman yang Menilai',
       ...dimensiHeaders,
       'Rata-Rata Total (1-5)',
       'Apresiasi & Catatan Positif Teman',
@@ -530,6 +593,8 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
       const comments = stat && stat.comments.length > 0 ? stat.comments.join('; ') : '-';
       const links =
         stat && stat.links.length > 0 ? stat.links.map((l) => l.url).join('; ') : '-';
+      const evaluatorNames =
+        stat && stat.penilaiNames.length > 0 ? stat.penilaiNames.join('; ') : '-';
 
       return [
         idx + 1,
@@ -537,6 +602,7 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
         `"${s.name}"`,
         `"${currentKelas?.nama || selectedKelasId}"`,
         count,
+        `"${evaluatorNames.replace(/"/g, '""')}"`,
         ...dimVals,
         avg,
         `"${comments.replace(/"/g, '""')}"`,
@@ -1004,6 +1070,11 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
                       <h3 className="text-xs font-extrabold text-slate-900 truncate">{s.name}</h3>
                       <p className="text-[11px] text-slate-400">
                         Dinilai oleh {stat?.count || 0} rekan
+                        {stat && stat.penilaiNames.length > 0 && (
+                          <span className="block text-[10px] text-indigo-600 font-semibold truncate">
+                            Penilai: {stat.penilaiNames.join(', ')}
+                          </span>
+                        )}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
@@ -1157,6 +1228,7 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
                   <th className="py-3 px-3 w-10 text-center">No</th>
                   <th className="py-3 px-3 min-w-[180px]">Nama Siswa & NIS</th>
                   <th className="py-3 px-2 text-center w-28">Jml Penilai</th>
+                  <th className="py-3 px-3 min-w-[170px]">Nama yang Menilai</th>
                   {activeDimensiList.map((dim) => (
                     <th key={dim.id} className="py-3 px-2 text-center min-w-[90px]">
                       {dim.nama}
@@ -1170,7 +1242,7 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
               <tbody className="divide-y divide-slate-100">
                 {studentsInClass.length === 0 ? (
                   <tr>
-                    <td colSpan={5 + activeDimensiList.length} className="py-8 text-center text-slate-400">
+                    <td colSpan={6 + activeDimensiList.length} className="py-8 text-center text-slate-400">
                       Tidak ada data siswa ditemukan di kelas ini.
                     </td>
                   </tr>
@@ -1197,6 +1269,27 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
                             </span>
                           ) : (
                             <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3">
+                          {stat && stat.penilaiNames.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {stat.penilaiDetails.map((pd, pIdx) => (
+                                <span
+                                  key={pIdx}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs"
+                                  title={`Dinilai oleh ${pd.nama} • Rata-rata Skor: ${pd.skor}/5.0`}
+                                >
+                                  <UserCheck className="w-2.5 h-2.5 text-indigo-600 shrink-0" />
+                                  <span className="truncate max-w-[95px]">{pd.nama}</span>
+                                  <span className="text-indigo-700 font-black text-[9px] bg-indigo-50 px-1 py-0.2 rounded">
+                                    ★{pd.skor}
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-300 italic text-[11px]">-</span>
                           )}
                         </td>
                         {activeDimensiList.map((dim) => (
@@ -1536,20 +1629,82 @@ export const PenilaianTemanSejawatManager: React.FC<PenilaianTemanSejawatManager
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Pilih Kelas yang Diatur
-                </label>
-                <select
-                  value={manageKelasId}
-                  onChange={(e) => handleOpenManageDimensi(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-hidden"
-                >
-                  {availableClasses.map((k) => (
-                    <option key={k.id} value={k.id}>
-                      {k.nama}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-800">
+                    Pilih Kelas yang Diatur ({manageKelasIds.length} Terpilih)
+                  </label>
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    {availableClasses.length >= 3 && (
+                      <button
+                        type="button"
+                        onClick={handleSelectFirst3Classes}
+                        className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold"
+                        title="Pilih 3 kelas sekaligus untuk pembelajaran PJOK gabungan"
+                      >
+                        ⚡ 3 Kelas PJOK
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSelectAllAssignedClasses}
+                      className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                    >
+                      Pilih Semua ({availableClasses.length})
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 space-y-2">
+                  <p className="text-[11px] text-slate-500 font-semibold">
+                    Centang kelas yang akan disinkronkan (bisa pilih lebih dari 1 saat pembelajaran PJOK berlangsung gabungan 3 kelas):
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto pr-1">
+                    {availableClasses.map((k) => {
+                      const isSelected = manageKelasIds.includes(k.id);
+                      const studentCount = (db.users || []).filter(
+                        (u) => u.role === 'MURID' && u.kelasId === k.id
+                      ).length;
+
+                      return (
+                        <label
+                          key={k.id}
+                          className={`flex items-center gap-2 p-2 rounded-xl text-xs cursor-pointer border transition-all ${
+                            isSelected
+                              ? 'bg-indigo-50 border-indigo-300 text-indigo-900 font-bold shadow-2xs'
+                              : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-100/70'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleManageKelas(k.id)}
+                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div className="min-w-0">
+                            <span className="block truncate font-bold">Kelas {k.nama}</span>
+                            <span className="text-[10px] text-slate-400 font-normal block">
+                              {studentCount} murid
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {manageKelasIds.length > 0 && (
+                    <div className="pt-1 text-[11px] text-indigo-800 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span className="truncate">
+                        Aktif untuk:{' '}
+                        {availableClasses
+                          .filter((k) => manageKelasIds.includes(k.id))
+                          .map((k) => `Kelas ${k.nama}`)
+                          .join(', ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>

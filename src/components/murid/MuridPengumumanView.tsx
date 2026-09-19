@@ -63,10 +63,21 @@ export const MuridPengumumanView: React.FC<MuridPengumumanViewProps> = ({
         return false;
       }
       // Class filter
-      if (p.targetKelasId && p.targetKelasId !== 'ALL') {
+      if (p.targetKelasIds && p.targetKelasIds.length > 0) {
+        if (!p.targetKelasIds.includes('ALL')) {
+          const matchId = userKelasId && p.targetKelasIds.includes(userKelasId);
+          const matchNama =
+            userKelasNama &&
+            (p.targetKelasNamas?.some((n) => n.toLowerCase() === userKelasNama.toLowerCase()) ||
+              p.targetKelasNama?.toLowerCase().includes(userKelasNama.toLowerCase()));
+          if (!matchId && !matchNama) {
+            return false;
+          }
+        }
+      } else if (p.targetKelasId && p.targetKelasId !== 'ALL') {
         if (userKelasId && p.targetKelasId !== userKelasId) {
           // check if name matches as fallback
-          if (!userKelasNama || !p.targetKelasNama || p.targetKelasNama.toLowerCase() !== userKelasNama.toLowerCase()) {
+          if (!userKelasNama || !p.targetKelasNama || !p.targetKelasNama.toLowerCase().includes(userKelasNama.toLowerCase())) {
             return false;
           }
         }

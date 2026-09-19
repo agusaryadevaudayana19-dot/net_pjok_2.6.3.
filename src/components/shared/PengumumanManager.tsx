@@ -20,9 +20,12 @@ import {
   ExternalLink,
   Users,
   Eye,
+  CheckSquare,
+  Square,
+  Check,
 } from 'lucide-react';
 import { LMSDatabase, dataStorage } from '../../services/dataStorage';
-import { User, Pengumuman, KategoriPengumuman } from '../../types';
+import { User, Pengumuman, KategoriPengumuman, getTeacherAssignedClasses } from '../../types';
 
 interface PengumumanManagerProps {
   db: LMSDatabase;
@@ -35,6 +38,15 @@ export const PengumumanManager: React.FC<PengumumanManagerProps> = ({ db, curren
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKategori, setSelectedKategori] = useState<string>('SEMUA');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [targetKelasIds, setTargetKelasIds] = useState<string[]>(['ALL']);
+
+  const teacherClasses = React.useMemo(() => {
+    if (currentUser.role === 'GURU') {
+      const assigned = getTeacherAssignedClasses(currentUser, db.kelas);
+      return assigned.length > 0 ? assigned : db.kelas;
+    }
+    return db.kelas;
+  }, [currentUser, db.kelas]);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -59,6 +71,7 @@ export const PengumumanManager: React.FC<PengumumanManagerProps> = ({ db, curren
     prioritas: 'Biasa',
     targetRole: 'ALL',
     targetKelasId: 'ALL',
+    targetKelasIds: ['ALL'],
     targetKelasNama: 'Semua Rombel',
     lampiranUrl: '',
     namaLampiran: '',
@@ -70,6 +83,7 @@ export const PengumumanManager: React.FC<PengumumanManagerProps> = ({ db, curren
 
   const handleOpenAdd = () => {
     setEditingItem(null);
+    setTargetKelasIds(['ALL']);
     setFormData({
       judul: '',
       isi: '',
@@ -78,6 +92,7 @@ export const PengumumanManager: React.FC<PengumumanManagerProps> = ({ db, curren
       prioritas: 'Biasa',
       targetRole: 'ALL',
       targetKelasId: 'ALL',
+      targetKelasIds: ['ALL'],
       targetKelasNama: 'Semua Rombel',
       lampiranUrl: '',
       namaLampiran: '',
@@ -92,8 +107,37 @@ export const PengumumanManager: React.FC<PengumumanManagerProps> = ({ db, curren
 
   const handleOpenEdit = (p: Pengumuman) => {
     setEditingItem(p);
+    const initialIds = p.targetKelasIds && p.targetKelasIds.length > 0
+      ? p.targetKelasIds
+      : (p.targetKelasId ? [p.targetKelasId] : ['ALL']);
+    setTargetKelasIds(initialIds);
     setFormData(p);
     setIsModalOpen(true);
+  };
+
+  const toggleTargetClass = (kelasId: string) => {
+    if (kelasId === 'ALL') {
+      setTargetKelasIds(['ALL']);
+      return;
+    }
+
+    setTargetKelasIds((prev) => {
+      const withoutAll = prev.filter((id) => id !== 'ALL');
+      if (withoutAll.includes(kelasId)) {
+        const next = withoutAll.filter((id) => id !== kelasId);
+        return next.length === 0 ? ['ALL'] : next;
+      } else {
+        return [...withoutAll, kelasId];
+      }
+    });
+  };
+
+  const handleSelectAllClasses = () => {
+    setTargetKelasIds(db.kelas.map((k) => k.id));
+  };
+
+  const handleSelectTeacherClasses = () => {
+    setTargetKelasIds(teacherClasses.map((k) => k.id));
   };
 
   const handleDelete = (id: string, judul: string) => {
@@ -111,17 +155,32 @@ export const PengumumanManager: React.FC<PengumumanManagerProps> = ({ db, curren
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const isAll = targetKelasIds.includes('ALL') || targetKelasIds.length === 0;
     let targetKelasNama = 'Semua Rombel';
-    if (formData.targetKelasId && formData.targetKelasId !== 'ALL') {
-      const k = (db.kelas || []).find((item) => item.id === formData.targetKelasId);
-      if (k) targetKelasNama = `Kelas ${k.nama}`;
+    let finalTargetIds: string[] = ['ALL'];
+    let finalTargetNamas: string[] = [];
+
+    if (!isAll) {
+      finalTargetIds = targetKelasIds;
+      const selectedObjs = (db.kelas || []).filter((k) => targetKelasIds.includes(k.id));
+      finalTargetNamas = selectedObjs.map((k) => k.nama);
+      if (finalTargetNamas.length === 1) {
+        targetKelasNama = `Kelas ${finalTargetNamas[0]}`;
+      } else if (finalTargetNamas.length > 1) {
+        targetKelasNama = `Kelas ${finalTargetNamas.join(', ')}`;
+      }
     }
+
+    const primaryTargetId = isAll ? 'ALL' : (finalTargetIds[0] || 'ALL');
 
     if (editingItem) {
       const updated: Pengumuman = {
         ...editingItem,
         ...formData,
+        targetKelasId: primaryTargetId,
+        targetKelasIds: finalTargetIds,
         targetKelasNama,
+        targetKelasNamas: finalTargetNamas,
         guruNama: formData.guruNama || defaultGuruNama,
         guruNip: formData.guruNip || defaultGuruNip,
         guruAvatar: currentUser.avatar || editingItem.guruAvatar,
@@ -138,8 +197,10 @@ export const PengumumanManager: React.FC<PengumumanManagerProps> = ({ db, curren
         disematkan: Boolean(formData.disematkan),
         prioritas: formData.prioritas || 'Biasa',
         targetRole: 'ALL',
-        targetKelasId: formData.targetKelasId || 'ALL',
+        targetKelasId: primaryTargetId,
+        targetKelasIds: finalTargetIds,
         targetKelasNama,
+        targetKelasNamas: finalTargetNamas,
         lampiranUrl: formData.lampiranUrl || '',
         namaLampiran: formData.namaLampiran || '',
         guruId: currentUser.id,
@@ -297,9 +358,17 @@ export const PengumumanManager: React.FC<PengumumanManagerProps> = ({ db, curren
                       {p.kategori || 'Informasi'}
                     </span>
 
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                      {p.targetKelasNama || 'Semua Rombel'}
-                    </span>
+                    {/* Multi-class badge display */}
+                    {p.targetKelasIds && p.targetKelasIds.length > 1 && !p.targetKelasIds.includes('ALL') ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                        <Users className="w-3 h-3 text-blue-600" />
+                        {p.targetKelasNama || `${p.targetKelasIds.length} Rombel Terpilih`}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        {p.targetKelasNama || 'Semua Rombel'}
+                      </span>
+                    )}
 
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200">
                       <Eye className="w-3 h-3 text-slate-400" />
@@ -421,21 +490,102 @@ export const PengumumanManager: React.FC<PengumumanManagerProps> = ({ db, curren
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Target Rombel Kelas *
-                  </label>
-                  <select
-                    value={formData.targetKelasId || 'ALL'}
-                    onChange={(e) => setFormData({ ...formData, targetKelasId: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="ALL">Semua Rombel (Seluruh Siswa)</option>
-                    {db.kelas.map((k) => (
-                      <option key={k.id} value={k.id}>
-                        Kelas {k.nama}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-slate-700 uppercase tracking-wider">
+                      Target Rombel Kelas *
+                    </label>
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setTargetKelasIds(['ALL'])}
+                        className={`px-2 py-0.5 rounded-lg font-bold transition-colors ${
+                          targetKelasIds.includes('ALL')
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        }`}
+                      >
+                        Semua Siswa
+                      </button>
+                      {currentUser.role === 'GURU' && teacherClasses.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleSelectTeacherClasses}
+                          className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold"
+                        >
+                          Kelas Diampu ({teacherClasses.length})
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleSelectAllClasses}
+                        className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold"
+                      >
+                        Semua Kelas
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 space-y-2">
+                    <label className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={targetKelasIds.includes('ALL')}
+                        onChange={() => toggleTargetClass('ALL')}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="font-bold text-slate-800 text-xs">
+                        📢 Semua Rombel (Seluruh Siswa)
+                      </span>
+                    </label>
+
+                    <div className="pt-1.5 border-t border-slate-200/80">
+                      <p className="text-[10px] text-slate-500 font-semibold mb-1.5">
+                        Atau pilih 1 atau beberapa kelas spesifik (bisa pilih lebih dari 1 untuk pembelajaran gabungan PJOK):
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                        {db.kelas.map((k) => {
+                          const isChecked = !targetKelasIds.includes('ALL') && targetKelasIds.includes(k.id);
+                          const isAssigned = teacherClasses.some((tc) => tc.id === k.id);
+                          return (
+                            <label
+                              key={k.id}
+                              className={`flex items-center gap-2 p-1.5 rounded-lg text-[11px] cursor-pointer border transition-all ${
+                                isChecked
+                                  ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold'
+                                  : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-100/80'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleTargetClass(k.id)}
+                                className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="truncate">
+                                Kelas {k.nama}
+                                {isAssigned && currentUser.role === 'GURU' && (
+                                  <span className="ml-1 text-[9px] text-indigo-600">★</span>
+                                )}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {!targetKelasIds.includes('ALL') && targetKelasIds.length > 0 && (
+                      <div className="pt-1 text-[11px] text-blue-700 font-bold flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-blue-600" />
+                        <span>
+                          {targetKelasIds.length} Rombel Terpilih:{' '}
+                          {(db.kelas || [])
+                            .filter((k) => targetKelasIds.includes(k.id))
+                            .map((k) => `Kelas ${k.nama}`)
+                            .join(', ')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

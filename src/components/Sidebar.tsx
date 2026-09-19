@@ -169,6 +169,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {
         title: 'REKAPAN',
         items: [
+          { id: 'rekap-praktik', label: 'Rekapan Penilaian Praktek', icon: <Activity className="w-5 h-5 text-orange-400" /> },
+          { id: 'rekap-quiz', label: 'Rekapan Hasil Quis Murid', icon: <Award className="w-5 h-5 text-purple-400" /> },
           { id: 'rekap-jurnal', label: 'Rekapan Jurnal', icon: <ClipboardList className="w-5 h-5 text-teal-400" /> },
           { id: 'rekap-absensi', label: 'Rekapan Presensi', icon: <CalendarCheck className="w-5 h-5 text-emerald-400" /> },
           { id: 'rekap-penilaian-teman', label: 'Rekapan Penilaian Teman Sejawat', icon: <Users2 className="w-5 h-5 text-indigo-400" /> },
@@ -235,6 +237,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {
         title: 'REKAPAN',
         items: [
+          { id: 'rekap-praktik', label: 'Rekapan Penilaian Praktek', icon: <Activity className="w-5 h-5 text-orange-400" /> },
+          { id: 'rekap-quiz', label: 'Rekapan Hasil Quis Murid', icon: <Award className="w-5 h-5 text-purple-400" /> },
           { id: 'rekap-jurnal', label: 'Rekapan Jurnal', icon: <ClipboardList className="w-5 h-5 text-teal-400" /> },
           { id: 'rekap-absensi', label: 'Rekapan Presensi', icon: <CalendarCheck className="w-5 h-5 text-emerald-400" /> },
           { id: 'rekap-penilaian-teman', label: 'Rekapan Penilaian Teman Sejawat', icon: <Users2 className="w-5 h-5 text-indigo-400" /> },
@@ -258,7 +262,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const myKelasId = currentUser?.kelasId || '';
     const unreadCount = (dbData.pengumuman || []).filter((p) => {
       if (p.targetRole && p.targetRole !== 'ALL' && p.targetRole !== 'MURID') return false;
-      if (p.targetKelasId && p.targetKelasId !== 'ALL' && myKelasId && p.targetKelasId !== myKelasId) {
+      if (p.targetKelasIds && p.targetKelasIds.length > 0) {
+        if (!p.targetKelasIds.includes('ALL') && myKelasId && !p.targetKelasIds.includes(myKelasId)) {
+          return false;
+        }
+      } else if (p.targetKelasId && p.targetKelasId !== 'ALL' && myKelasId && p.targetKelasId !== myKelasId) {
         return false;
       }
       return !(p.dibacaOleh || []).includes(myId);

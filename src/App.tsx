@@ -180,7 +180,9 @@ export default function App() {
       else if (targetMenu === 'quiz-saya') targetMenu = 'quiz';
       else if (targetMenu === 'presensi-saya') targetMenu = 'presensi';
       else if (targetMenu === 'nilai-saya') targetMenu = 'nilai';
-      else if (targetMenu === 'profil-saya') targetMenu = 'profil';
+      else if (targetMenu === 'profil') targetMenu = 'profil-saya';
+    } else if (currentUser?.role === 'ADMIN') {
+      if (targetMenu === 'profil') targetMenu = 'profil-saya';
     }
     setActiveMenu(targetMenu);
     setActiveSubParam(param);
@@ -285,6 +287,7 @@ export default function App() {
             />
           );
         case 'profil-saya':
+        case 'profil':
           return (
             <ProfilMandiri
               currentUser={currentUser}
@@ -360,6 +363,7 @@ export default function App() {
             />
           );
         case 'profil-saya':
+        case 'profil':
           return (
             <ProfilMandiri
               currentUser={currentUser}

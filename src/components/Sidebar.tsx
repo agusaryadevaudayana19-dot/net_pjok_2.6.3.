@@ -136,16 +136,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ],
       },
       {
-        title: 'PEMBELAJARAN & ASESMEN',
+        title: 'PEMBELAJARAN',
         items: [
           { id: 'materi', label: 'Konten Materi', icon: <BookMarked className="w-5 h-5" /> },
           { id: 'tugas', label: 'Tugas', icon: <ClipboardList className="w-5 h-5" /> },
-          { id: 'quiz', label: 'Quiz & Asesmen', icon: <CheckCircle className="w-5 h-5" /> },
-          { id: 'praktik', label: 'Penilaian Praktik', icon: <Activity className="w-5 h-5" /> },
+          { id: 'quiz', label: 'Quiz', icon: <CheckCircle className="w-5 h-5" /> },
+          { id: 'refleksi', label: 'Refleksi Pembelajaran', icon: <Sparkles className="w-5 h-5 text-amber-400" /> },
+        ],
+      },
+      {
+        title: 'PENILAIAN',
+        items: [
           { id: 'penilaian-harian', label: 'Penilaian Harian', icon: <Flame className="w-5 h-5 text-sky-400" /> },
           { id: 'penilaian-sikap', label: 'Penilaian Sikap', icon: <HeartHandshake className="w-5 h-5 text-emerald-400" /> },
           { id: 'penilaian-teman', label: 'Penilaian Teman Sejawat', icon: <Users2 className="w-5 h-5 text-indigo-400" /> },
-          { id: 'refleksi', label: 'Refleksi Pembelajaran', icon: <Sparkles className="w-5 h-5" /> },
+          { id: 'praktik', label: 'Penilaian Praktek', icon: <Activity className="w-5 h-5" /> },
         ],
       },
       {
@@ -201,7 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'data-murid', label: 'Data Murid', icon: <GraduationCap className="w-5 h-5" /> },
           { id: 'materi', label: 'Materi Pembelajaran', icon: <BookMarked className="w-5 h-5" /> },
           { id: 'tugas', label: 'Tugas', icon: <ClipboardList className="w-5 h-5" /> },
-          { id: 'quiz', label: 'Quiz & Asesmen', icon: <CheckCircle className="w-5 h-5" /> },
+          { id: 'quiz', label: 'Quiz', icon: <CheckCircle className="w-5 h-5" /> },
           { id: 'refleksi', label: 'Refleksi Pembelajaran', icon: <Sparkles className="w-5 h-5 text-amber-400" /> },
         ],
       },
